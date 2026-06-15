@@ -1,0 +1,94 @@
+import fs from 'fs';
+import path from 'path';
+
+const PACKAGES_DIR = path.join(process.cwd(), 'packages');
+const IGNORED_PACKAGES = ['corsair', 'cli', 'mcp', 'studio', 'ui', 'app'];
+
+const plugins = fs
+	.readdirSync(PACKAGES_DIR, { withFileTypes: true })
+	.filter(
+		(dirent) => dirent.isDirectory() && !IGNORED_PACKAGES.includes(dirent.name),
+	)
+	.map((dirent) => dirent.name);
+
+let hasErrors = false;
+
+function logError(plugin: string, message: string) {
+	console.error(`❌ [${plugin}] ${message}`);
+	hasErrors = true;
+}
+
+function logSuccess(plugin: string, message: string) {
+	console.log(`✅ [${plugin}] ${message}`);
+}
+
+for (const plugin of plugins) {
+	const pluginPath = path.join(PACKAGES_DIR, plugin);
+
+	// 1. Check package.json
+	const packageJsonPath = path.join(pluginPath, 'package.json');
+	if (!fs.existsSync(packageJsonPath)) {
+		logError(plugin, 'Missing package.json');
+		continue;
+	}
+
+	let pkg: any;
+	try {
+		pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+	} catch (e) {
+		logError(plugin, 'Invalid package.json JSON');
+		continue;
+	}
+
+	// 2. Validate package.json contents
+	if (!pkg.name?.startsWith('@corsair-dev/')) {
+		logError(plugin, 'Package name must start with @corsair-dev/');
+	}
+
+	if (!pkg.scripts?.test?.startsWith('jest')) {
+		logError(plugin, 'Must have a "test" script using jest in package.json');
+	}
+
+	if (!pkg.devDependencies?.jest) {
+		logError(plugin, 'Must have "jest" in devDependencies');
+	}
+
+	if (!pkg.devDependencies?.['@types/jest']) {
+		logError(plugin, 'Must have "@types/jest" in devDependencies');
+	}
+
+	// 3. Check for index.ts
+	if (!fs.existsSync(path.join(pluginPath, 'index.ts'))) {
+		logError(plugin, 'Missing index.ts');
+	}
+
+	// 4. Check for endpoints directory or endpoints.ts file
+	const hasEndpointsDir =
+		fs.existsSync(path.join(pluginPath, 'endpoints')) &&
+		fs.statSync(path.join(pluginPath, 'endpoints')).isDirectory();
+	const hasEndpointsFile = fs.existsSync(path.join(pluginPath, 'endpoints.ts'));
+
+	if (!hasEndpointsDir && !hasEndpointsFile) {
+		logError(plugin, 'Missing endpoints/ directory or endpoints.ts file');
+	}
+
+	// 5. Check for test files (must have api.test.ts, integration.test.ts, or be inside a tests/ dir)
+	const files = fs.readdirSync(pluginPath);
+	const hasTestFile = files.some((f) => f.endsWith('.test.ts'));
+	const hasTestsDir = fs.existsSync(path.join(pluginPath, 'tests'));
+
+	// Ensure no forbidden manual test scripts
+	if (pkg.scripts?.['test:manual'] && !pkg.scripts.test?.startsWith('jest')) {
+		logError(
+			plugin,
+			'test:manual should not replace the main test script. The main test script must be jest.',
+		);
+	}
+}
+
+if (hasErrors) {
+	console.error('\n💥 Plugin validation failed. Please fix the errors above.');
+	process.exit(1);
+} else {
+	console.log('\n🎉 All plugins passed structural validation!');
+}
