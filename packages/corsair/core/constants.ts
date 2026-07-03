@@ -42,6 +42,7 @@ export const BaseProviders = [
 	'grafana',
 	'hackernews',
 	'hubspot',
+	'instagram',
 	'intercom',
 	'jira',
 	'linear',
@@ -75,11 +76,11 @@ export const BaseProviders = [
 	'typeform',
 	'vapi',
 	'xquik',
+	'youcom',
 	'youtube',
 	'zendesk',
 	'zohomail',
 	'zoom',
-	'instagram',
 ] as const;
 
 export const ProviderDisplayNames = {
@@ -145,6 +146,7 @@ export const ProviderDisplayNames = {
 	typeform: 'Typeform',
 	vapi: 'Vapi',
 	xquik: 'XQuik',
+	youcom: 'You.com',
 	youtube: 'YouTube',
 	zendesk: 'Zendesk',
 	zohomail: 'Zoho Mail',
@@ -189,6 +191,7 @@ export type AllProviders =
 	| 'grafana'
 	| 'hackernews'
 	| 'hubspot'
+	| 'instagram'
 	| 'intercom'
 	| 'jira'
 	| 'linear'
@@ -222,11 +225,11 @@ export type AllProviders =
 	| 'typeform'
 	| 'vapi'
 	| 'xquik'
+	| 'youcom'
 	| 'youtube'
 	| 'zendesk'
 	| 'zohomail'
 	| 'zoom'
-	| 'instagram'
 	| (string & {});
 
 export type AuthTypes = 'oauth_2' | 'api_key' | 'bot_token' | 'managed';
