@@ -29,6 +29,7 @@ export const BaseProviders = [
 	'dodopayments',
 	'dropbox',
 	'exa',
+	'facebook',
 	'figma',
 	'firecrawl',
 	'fireflies',
@@ -42,6 +43,7 @@ export const BaseProviders = [
 	'grafana',
 	'hackernews',
 	'hubspot',
+	'instagram',
 	'intercom',
 	'jira',
 	'linear',
@@ -79,7 +81,6 @@ export const BaseProviders = [
 	'zendesk',
 	'zohomail',
 	'zoom',
-	'instagram',
 ] as const;
 
 export const ProviderDisplayNames = {
@@ -176,6 +177,7 @@ export type AllProviders =
 	| 'dodopayments'
 	| 'dropbox'
 	| 'exa'
+	| 'facebook'
 	| 'figma'
 	| 'firecrawl'
 	| 'fireflies'
@@ -189,6 +191,7 @@ export type AllProviders =
 	| 'grafana'
 	| 'hackernews'
 	| 'hubspot'
+	| 'instagram'
 	| 'intercom'
 	| 'jira'
 	| 'linear'
@@ -226,7 +229,6 @@ export type AllProviders =
 	| 'zendesk'
 	| 'zohomail'
 	| 'zoom'
-	| 'instagram'
 	| (string & {});
 
 export type AuthTypes = 'oauth_2' | 'api_key' | 'bot_token' | 'managed';
