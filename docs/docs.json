@@ -126,7 +126,10 @@
         "groups": [
           {
             "group": "Overview",
-            "pages": ["guides/plugins", "guides/create-your-own-plugin"]
+            "pages": [
+              "guides/plugins",
+              "guides/create-your-own-plugin"
+            ]
           },
           {
             "group": "Plugins",
@@ -271,6 +274,14 @@
                   "plugins/exa/api",
                   "plugins/exa/database",
                   "plugins/exa/webhooks"
+                ]
+              },
+              {
+                "group": "Facebook",
+                "pages": [
+                  "plugins/facebook/overview",
+                  "plugins/facebook/api",
+                  "plugins/facebook/database"
                 ]
               },
               {
