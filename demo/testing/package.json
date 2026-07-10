@@ -47,6 +47,7 @@
     "@corsair-dev/twilio": "workspace:*",
     "@corsair-dev/vapi": "workspace:*",
     "@corsair-dev/xquik": "workspace:*",
+    "@corsair-dev/facebook": "workspace:*",
     "@corsair-dev/instagram": "workspace:*",
     "@tanstack/react-query": "^5.62.14",
     "@trpc/client": "^11.0.0",
@@ -60,7 +61,7 @@
     "next": "^14.2.24",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "zod": "^3.24.1"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@corsair-dev/cli": "workspace:*",
