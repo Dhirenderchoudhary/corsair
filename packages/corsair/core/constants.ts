@@ -151,6 +151,7 @@ export const ProviderDisplayNames = {
 	zohomail: 'Zoho Mail',
 	zoom: 'Zoom',
 	instagram: 'Instagram',
+	facebook: 'Facebook',
 } as const satisfies Record<(typeof BaseProviders)[number], string>;
 
 export function formatProviderDisplayName(plugin: string): string {

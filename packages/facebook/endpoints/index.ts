@@ -1,7 +1,9 @@
-import { get as exampleGet } from './example';
-
-export const Example = {
-	get: exampleGet,
-};
-
-export * from './types';
+export * as UsersEndpoints from './users';
+export * as PagesEndpoints from './pages';
+export * as PostsEndpoints from './posts';
+export * as CommentsEndpoints from './comments';
+export * as ReactionsEndpoints from './reactions';
+export * as PhotosEndpoints from './photos';
+export * as VideosEndpoints from './videos';
+export * as ConversationsEndpoints from './conversations';
+export * as MessagesEndpoints from './messages';
