@@ -76,6 +76,7 @@ export const BaseProviders = [
 	'typeform',
 	'vapi',
 	'whatsapp',
+	'workday',
 	'xquik',
 	'youtube',
 	'zendesk',
@@ -147,6 +148,7 @@ export const ProviderDisplayNames = {
 	typeform: 'Typeform',
 	vapi: 'Vapi',
 	whatsapp: 'WhatsApp',
+	workday: 'Workday',
 	xquik: 'XQuik',
 	youtube: 'YouTube',
 	zendesk: 'Zendesk',
@@ -225,6 +227,7 @@ export type AllProviders =
 	| 'typeform'
 	| 'vapi'
 	| 'whatsapp'
+	| 'workday'
 	| 'xquik'
 	| 'youtube'
 	| 'zendesk'
