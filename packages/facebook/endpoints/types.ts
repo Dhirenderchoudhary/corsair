@@ -26,8 +26,8 @@ import {
 	FacebookVideosListSchema,
 	GraphIdResponseSchema,
 	GraphSuccessResponseSchema,
-	PaginationInputSchema,
 	PageIdInputSchema,
+	PaginationInputSchema,
 	ReactionTypeSchema,
 } from './types/common';
 
@@ -60,7 +60,9 @@ const SearchPagesInputSchema = z
 		limit: z.number().int().positive().max(100).optional(),
 		after: z.string().optional(),
 	})
-	.describe('Search public Facebook Pages.');
+	.describe(
+		'DEPRECATED for standard Facebook apps: /pages/search is Workplace-only and returns Error #10 for most apps. Prefer pages.listManaged or direct page ID lookup.',
+	);
 
 const UpdatePageSettingsInputSchema = z
 	.object({
@@ -78,9 +80,7 @@ const GetPageInsightsInputSchema = PageIdInputSchema.extend({
 	metric: z
 		.union([z.string(), z.array(z.string())])
 		.describe('Insight metric name(s), e.g. page_impressions.'),
-	period: z
-		.enum(['day', 'week', 'days_28', 'month', 'lifetime'])
-		.optional(),
+	period: z.enum(['day', 'week', 'days_28', 'month', 'lifetime']).optional(),
 	since: z.union([z.string(), z.number()]).optional(),
 	until: z.union([z.string(), z.number()]).optional(),
 }).describe('Retrieve Page insights for the given metrics and period.');
@@ -95,7 +95,9 @@ const AssignPageTaskInputSchema = z
 		user: z.string().describe('Facebook User ID to assign tasks to.'),
 		tasks: z
 			.array(z.string())
-			.describe('Page tasks such as MANAGE, CREATE_CONTENT, MODERATE, ADVERTISE, ANALYZE.'),
+			.describe(
+				'Page tasks such as MANAGE, CREATE_CONTENT, MODERATE, ADVERTISE, ANALYZE.',
+			),
 	})
 	.describe('Assign Page tasks to a user.');
 
@@ -117,24 +119,43 @@ const CreatePostInputSchema = z
 		scheduled_publish_time: z.number().optional(),
 		targeting: z.record(z.string(), z.unknown()).optional(),
 	})
+	.refine((value) => Boolean(value.message || value.link), {
+		message: 'Either message or link is required to create a post.',
+	})
 	.describe('Publish or schedule a Page feed post.');
 
 const GetPostInputSchema = z
 	.object({
 		post_id: z.string(),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when post_id is composite PageID_PostID.',
+			),
 		fields: z.string().optional(),
 	})
 	.describe('Retrieve a single Page post by ID.');
 
-const GetPagePostsInputSchema = PageIdInputSchema.merge(PaginationInputSchema)
-	.describe('List posts published on a Facebook Page.');
+const GetPagePostsInputSchema = PageIdInputSchema.merge(
+	PaginationInputSchema,
+).describe(
+	'List Page timeline posts via /feed (page posts + visitor posts + tagged posts).',
+);
 
-const GetScheduledPostsInputSchema = PageIdInputSchema.merge(PaginationInputSchema)
-	.describe('List scheduled but unpublished Page posts.');
+const GetScheduledPostsInputSchema = PageIdInputSchema.merge(
+	PaginationInputSchema,
+).describe('List scheduled but unpublished Page posts.');
 
 const UpdatePostInputSchema = z
 	.object({
 		post_id: z.string(),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when post_id is composite PageID_PostID.',
+			),
 		message: z.string().optional(),
 		is_hidden: z.boolean().optional(),
 	})
@@ -143,12 +164,24 @@ const UpdatePostInputSchema = z
 const DeletePostInputSchema = z
 	.object({
 		post_id: z.string(),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when post_id is composite PageID_PostID.',
+			),
 	})
 	.describe('Delete a Page post.');
 
 const ReschedulePostInputSchema = z
 	.object({
 		post_id: z.string(),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when post_id is composite PageID_PostID.',
+			),
 		scheduled_publish_time: z
 			.number()
 			.describe('Unix timestamp for the new scheduled publish time.'),
@@ -158,6 +191,12 @@ const ReschedulePostInputSchema = z
 const PublishScheduledPostInputSchema = z
 	.object({
 		post_id: z.string(),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when post_id is composite PageID_PostID.',
+			),
 	})
 	.describe('Publish a previously scheduled post immediately.');
 
@@ -168,6 +207,12 @@ const GetPageTaggedPostsInputSchema = PageIdInputSchema.merge(
 const GetPostInsightsInputSchema = z
 	.object({
 		post_id: z.string(),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when post_id is composite PageID_PostID.',
+			),
 		metric: z.union([z.string(), z.array(z.string())]),
 	})
 	.describe('Retrieve insights for a Page post.');
@@ -175,6 +220,12 @@ const GetPostInsightsInputSchema = z
 const GetPostReactionsInputSchema = z
 	.object({
 		post_id: z.string(),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when post_id is composite PageID_PostID.',
+			),
 		type: ReactionTypeSchema.optional(),
 		limit: z.number().int().positive().max(100).optional(),
 		after: z.string().optional(),
@@ -186,7 +237,15 @@ const GetPostReactionsInputSchema = z
 
 const CreateCommentInputSchema = z
 	.object({
-		object_id: z.string().describe('Post ID, photo ID, or other commentable object ID.'),
+		object_id: z
+			.string()
+			.describe('Post ID, photo ID, or other commentable object ID.'),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when object_id is composite PageID_PostID.',
+			),
 		message: z.string(),
 	})
 	.describe('Create a comment on a Page post or other object.');
@@ -194,13 +253,27 @@ const CreateCommentInputSchema = z
 const GetCommentInputSchema = z
 	.object({
 		comment_id: z.string(),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when comment_id embeds the page id.',
+			),
 		fields: z.string().optional(),
 	})
 	.describe('Retrieve a single comment by ID.');
 
 const GetCommentsInputSchema = z
 	.object({
-		object_id: z.string().describe('Object ID whose comments should be listed.'),
+		object_id: z
+			.string()
+			.describe('Object ID whose comments should be listed.'),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when object_id is composite PageID_PostID.',
+			),
 		fields: z.string().optional(),
 		limit: z.number().int().positive().max(100).optional(),
 		after: z.string().optional(),
@@ -212,6 +285,9 @@ const GetCommentsInputSchema = z
 const UpdateCommentInputSchema = z
 	.object({
 		comment_id: z.string(),
+		page_id: z
+			.string()
+			.describe('Page ID used to resolve the Page access token.'),
 		message: z.string().optional(),
 		is_hidden: z.boolean().optional(),
 	})
@@ -220,6 +296,9 @@ const UpdateCommentInputSchema = z
 const DeleteCommentInputSchema = z
 	.object({
 		comment_id: z.string(),
+		page_id: z
+			.string()
+			.describe('Page ID used to resolve the Page access token.'),
 	})
 	.describe('Delete a comment.');
 
@@ -227,16 +306,34 @@ const DeleteCommentInputSchema = z
 
 const AddReactionInputSchema = z
 	.object({
-		object_id: z.string().describe('Post ID, comment ID, or other reactable object ID.'),
-		type: ReactionTypeSchema.optional().describe('Reaction type. Defaults to LIKE when omitted.'),
+		object_id: z
+			.string()
+			.describe('Post ID, comment ID, or other reactable object ID.'),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when object_id is composite PageID_PostID.',
+			),
+		type: ReactionTypeSchema.optional().describe(
+			'Only LIKE is supported by the Graph API for programmatic reactions.',
+		),
 	})
-	.describe('Add a reaction to a post or comment.');
+	.describe('Add a LIKE reaction to a post or comment.');
 
 const UnlikePostOrCommentInputSchema = z
 	.object({
-		object_id: z.string().describe('Post ID or comment ID to remove a like/reaction from.'),
+		object_id: z
+			.string()
+			.describe('Post ID or comment ID to remove a like/reaction from.'),
+		page_id: z
+			.string()
+			.optional()
+			.describe(
+				'Page ID for Page-token auth. Optional when object_id is composite PageID_PostID.',
+			),
 	})
-	.describe('Remove the authenticated user like/reaction from an object.');
+	.describe('Remove the Page like from an object.');
 
 // ─── Photos ──────────────────────────────────────────────────────────────────
 
@@ -280,7 +377,9 @@ const CreatePhotoPostInputSchema = z
 const AddPhotosToAlbumInputSchema = z
 	.object({
 		album_id: z.string(),
-		page_id: z.string().describe('Page ID used to resolve the Page access token.'),
+		page_id: z
+			.string()
+			.describe('Page ID used to resolve the Page access token.'),
 		url: z.string().optional(),
 		message: z.string().optional(),
 	})
@@ -295,8 +394,9 @@ const CreatePhotoAlbumInputSchema = z
 	})
 	.describe('Create a photo album on a Page.');
 
-const GetPagePhotosInputSchema = PageIdInputSchema.merge(PaginationInputSchema)
-	.describe('List photos uploaded to a Page.');
+const GetPagePhotosInputSchema = PageIdInputSchema.merge(
+	PaginationInputSchema,
+).describe('List photos uploaded to a Page.');
 
 // ─── Videos ──────────────────────────────────────────────────────────────────
 
@@ -311,8 +411,9 @@ const CreateVideoPostInputSchema = z
 	})
 	.describe('Create a video post on a Page using file_url.');
 
-const GetPageVideosInputSchema = PageIdInputSchema.merge(PaginationInputSchema)
-	.describe('List videos uploaded to a Page.');
+const GetPageVideosInputSchema = PageIdInputSchema.merge(
+	PaginationInputSchema,
+).describe('List videos uploaded to a Page.');
 
 const UploadVideoInputSchema = z
 	.object({
@@ -356,9 +457,7 @@ const SendMessageInputSchema = z
 		page_id: z.string(),
 		recipient_id: z.string(),
 		message: z.string(),
-		messaging_type: z
-			.enum(['RESPONSE', 'UPDATE', 'MESSAGE_TAG'])
-			.optional(),
+		messaging_type: z.enum(['RESPONSE', 'UPDATE', 'MESSAGE_TAG']).optional(),
 		tag: z.string().optional(),
 	})
 	.describe('Send a text Messenger message from a Page.');
@@ -369,9 +468,7 @@ const SendMediaMessageInputSchema = z
 		recipient_id: z.string(),
 		attachment_type: z.enum(['image', 'video', 'audio', 'file']),
 		attachment_url: z.string(),
-		messaging_type: z
-			.enum(['RESPONSE', 'UPDATE', 'MESSAGE_TAG'])
-			.optional(),
+		messaging_type: z.enum(['RESPONSE', 'UPDATE', 'MESSAGE_TAG']).optional(),
 		tag: z.string().optional(),
 	})
 	.describe('Send a media Messenger message from a Page.');
@@ -483,8 +580,8 @@ export type FacebookEndpointOutputs = {
 	getMessageDetails: z.infer<typeof FacebookMessageSchema>;
 	sendMessage: z.infer<typeof FacebookMessengerActionResponseSchema>;
 	sendMediaMessage: z.infer<typeof FacebookMessengerActionResponseSchema>;
-	markMessageSeen: z.infer<typeof GraphSuccessResponseSchema>;
-	toggleTypingIndicator: z.infer<typeof GraphSuccessResponseSchema>;
+	markMessageSeen: z.infer<typeof FacebookMessengerActionResponseSchema>;
+	toggleTypingIndicator: z.infer<typeof FacebookMessengerActionResponseSchema>;
 };
 
 export const FacebookEndpointInputSchemas = {
@@ -577,8 +674,8 @@ export const FacebookEndpointOutputSchemas = {
 	getMessageDetails: FacebookMessageSchema,
 	sendMessage: FacebookMessengerActionResponseSchema,
 	sendMediaMessage: FacebookMessengerActionResponseSchema,
-	markMessageSeen: GraphSuccessResponseSchema,
-	toggleTypingIndicator: GraphSuccessResponseSchema,
+	markMessageSeen: FacebookMessengerActionResponseSchema,
+	toggleTypingIndicator: FacebookMessengerActionResponseSchema,
 } as const;
 
 export {

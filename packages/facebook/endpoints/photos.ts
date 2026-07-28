@@ -1,11 +1,11 @@
-import { makeFacebookRequest, makePageFacebookRequest } from '../client';
+import { makePageFacebookRequest } from '../client';
 import type { FacebookEndpoints } from '../index';
-import type { FacebookEndpointOutputs } from './types';
 import {
 	buildPaginationQuery,
 	logFacebookEvent,
 	omitUndefined,
 } from './shared';
+import type { FacebookEndpointOutputs } from './types';
 
 export const upload: FacebookEndpoints['uploadPhoto'] = async (ctx, input) => {
 	const { page_id, ...body } = input;
@@ -32,17 +32,16 @@ export const uploadBatch: FacebookEndpoints['uploadPhotosBatch'] = async (
 				url: photo.url,
 				caption: photo.caption,
 				published:
-					photo.published === undefined
-						? undefined
-						: String(photo.published),
+					photo.published === undefined ? undefined : String(photo.published),
 			}) as Record<string, string>,
 		).toString(),
 		name: `photo_${index}`,
 	}));
 
-	const result = await makeFacebookRequest<
+	// Batch Page photo uploads must authenticate with a Page access token.
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['uploadPhotosBatch']
-	>('/', ctx.key, {
+	>('/', ctx, input.page_id, {
 		method: 'POST',
 		formData: {
 			batch: JSON.stringify(batch),
@@ -58,6 +57,7 @@ export const createPost: FacebookEndpoints['createPhotoPost'] = async (
 	input,
 ) => {
 	const { page_id, url, message, published, scheduled_publish_time } = input;
+	const shouldSchedule = scheduled_publish_time !== undefined;
 	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['createPhotoPost']
 	>(`/${page_id}/photos`, ctx, page_id, {
@@ -65,7 +65,7 @@ export const createPost: FacebookEndpoints['createPhotoPost'] = async (
 		body: omitUndefined({
 			url,
 			message,
-			published: published ?? true,
+			published: published ?? (shouldSchedule ? false : true),
 			scheduled_publish_time,
 		}),
 	});
@@ -124,9 +124,7 @@ export const list: FacebookEndpoints['getPagePhotos'] = async (ctx, input) => {
 		FacebookEndpointOutputs['getPagePhotos']
 	>(`/${input.page_id}/photos`, ctx, input.page_id, {
 		query: buildPaginationQuery({
-			fields:
-				input.fields ??
-				'id,name,created_time,source,link,images',
+			fields: input.fields ?? 'id,name,created_time,source,link,images',
 			limit: input.limit,
 			after: input.after,
 			before: input.before,

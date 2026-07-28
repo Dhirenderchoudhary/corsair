@@ -109,7 +109,9 @@ export const FacebookInsightEntity = z.object({
 	objectId: z.string().optional(),
 	name: z.string().optional(),
 	period: z.string().optional(),
-	value: z.union([z.number(), z.string()]).optional(),
+	value: z
+		.union([z.number(), z.string(), z.record(z.string(), z.unknown())])
+		.optional(),
 	endTime: z.string().optional(),
 	createdAt: z.coerce.date().nullable().optional(),
 	updatedAt: z.coerce.date().nullable().optional(),
@@ -137,7 +139,9 @@ export type FacebookUserEntity = z.infer<typeof FacebookUserEntity>;
 export type FacebookPageEntity = z.infer<typeof FacebookPageEntity>;
 export type FacebookPostEntity = z.infer<typeof FacebookPostEntity>;
 export type FacebookCommentEntity = z.infer<typeof FacebookCommentEntity>;
-export type FacebookConversationEntity = z.infer<typeof FacebookConversationEntity>;
+export type FacebookConversationEntity = z.infer<
+	typeof FacebookConversationEntity
+>;
 export type FacebookMessageEntity = z.infer<typeof FacebookMessageEntity>;
 export type FacebookAlbumEntity = z.infer<typeof FacebookAlbumEntity>;
 export type FacebookPhotoEntity = z.infer<typeof FacebookPhotoEntity>;

@@ -1,20 +1,21 @@
-import { makeFacebookRequest } from '../client';
+import { makePageFacebookRequest, resolvePageId } from '../client';
 import type { FacebookEndpoints } from '../index';
-import type { FacebookEndpointOutputs } from './types';
 import {
 	buildPaginationQuery,
 	logFacebookEvent,
 	omitUndefined,
 } from './shared';
+import type { FacebookEndpointOutputs } from './types';
 
 export const create: FacebookEndpoints['createComment'] = async (
 	ctx,
 	input,
 ) => {
-	const { object_id, message } = input;
-	const result = await makeFacebookRequest<
+	const { object_id, message, page_id } = input;
+	const pageId = resolvePageId(page_id, object_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['createComment']
-	>(`/${object_id}/comments`, ctx.key, {
+	>(`/${object_id}/comments`, ctx, pageId, {
 		method: 'POST',
 		body: { message },
 	});
@@ -24,9 +25,10 @@ export const create: FacebookEndpoints['createComment'] = async (
 };
 
 export const get: FacebookEndpoints['getComment'] = async (ctx, input) => {
-	const result = await makeFacebookRequest<
+	const pageId = resolvePageId(input.page_id, input.comment_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['getComment']
-	>(`/${input.comment_id}`, ctx.key, {
+	>(`/${input.comment_id}`, ctx, pageId, {
 		query: {
 			fields:
 				input.fields ??
@@ -54,10 +56,11 @@ export const get: FacebookEndpoints['getComment'] = async (ctx, input) => {
 };
 
 export const list: FacebookEndpoints['getComments'] = async (ctx, input) => {
-	const { object_id, filter, ...pagination } = input;
-	const result = await makeFacebookRequest<
+	const { object_id, page_id, filter, ...pagination } = input;
+	const pageId = resolvePageId(page_id, object_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['getComments']
-	>(`/${object_id}/comments`, ctx.key, {
+	>(`/${object_id}/comments`, ctx, pageId, {
 		query: {
 			...buildPaginationQuery({
 				fields:
@@ -97,10 +100,11 @@ export const update: FacebookEndpoints['updateComment'] = async (
 	ctx,
 	input,
 ) => {
-	const { comment_id, ...body } = input;
-	const result = await makeFacebookRequest<
+	const { comment_id, page_id, ...body } = input;
+	const pageId = resolvePageId(page_id, comment_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['updateComment']
-	>(`/${comment_id}`, ctx.key, {
+	>(`/${comment_id}`, ctx, pageId, {
 		method: 'POST',
 		body: omitUndefined(body),
 	});
@@ -113,9 +117,10 @@ export const remove: FacebookEndpoints['deleteComment'] = async (
 	ctx,
 	input,
 ) => {
-	const result = await makeFacebookRequest<
+	const pageId = resolvePageId(input.page_id, input.comment_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['deleteComment']
-	>(`/${input.comment_id}`, ctx.key, {
+	>(`/${input.comment_id}`, ctx, pageId, {
 		method: 'DELETE',
 	});
 

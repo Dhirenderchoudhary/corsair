@@ -1,11 +1,11 @@
-import { makeFacebookRequest, makePageFacebookRequest } from '../client';
+import { makePageFacebookRequest, resolvePageId } from '../client';
 import type { FacebookEndpoints } from '../index';
-import type { FacebookEndpointOutputs } from './types';
 import {
 	buildPaginationQuery,
 	logFacebookEvent,
 	omitUndefined,
 } from './shared';
+import type { FacebookEndpointOutputs } from './types';
 
 function formatMetric(metric: string | string[]): string {
 	return Array.isArray(metric) ? metric.join(',') : metric;
@@ -25,26 +25,27 @@ export const create: FacebookEndpoints['createPost'] = async (ctx, input) => {
 };
 
 export const get: FacebookEndpoints['getPost'] = async (ctx, input) => {
-	const result = await makeFacebookRequest<FacebookEndpointOutputs['getPost']>(
-		`/${input.post_id}`,
-		ctx.key,
-		{
-			query: {
-				fields:
-					input.fields ??
-					'id,message,created_time,updated_time,is_published,scheduled_publish_time,permalink_url,full_picture',
-			},
+	const pageId = resolvePageId(input.page_id, input.post_id);
+	const result = await makePageFacebookRequest<
+		FacebookEndpointOutputs['getPost']
+	>(`/${input.post_id}`, ctx, pageId, {
+		query: {
+			fields:
+				input.fields ??
+				'id,message,created_time,updated_time,is_published,scheduled_publish_time,permalink_url,full_picture',
 		},
-	);
+	});
 
 	if (result.id) {
 		try {
 			await ctx.db.posts.upsertByEntityId(result.id, {
 				postId: result.id,
+				pageId,
 				message: result.message,
 				createdTime: result.created_time,
 				isPublished: result.is_published,
 				permalinkUrl: result.permalink_url,
+				scheduledPublishTime: result.scheduled_publish_time,
 			});
 		} catch {
 			// Non-fatal cache write
@@ -56,9 +57,10 @@ export const get: FacebookEndpoints['getPost'] = async (ctx, input) => {
 };
 
 export const list: FacebookEndpoints['getPagePosts'] = async (ctx, input) => {
+	// /feed returns page posts + visitor posts + tagged posts (most complete timeline).
 	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['getPagePosts']
-	>(`/${input.page_id}/posts`, ctx, input.page_id, {
+	>(`/${input.page_id}/feed`, ctx, input.page_id, {
 		query: buildPaginationQuery({
 			fields:
 				input.fields ??
@@ -79,6 +81,7 @@ export const list: FacebookEndpoints['getPagePosts'] = async (ctx, input) => {
 					message: post.message,
 					createdTime: post.created_time,
 					isPublished: post.is_published,
+					permalinkUrl: post.permalink_url,
 				});
 			} catch {
 				// Non-fatal cache write
@@ -112,10 +115,11 @@ export const listScheduled: FacebookEndpoints['getScheduledPosts'] = async (
 };
 
 export const update: FacebookEndpoints['updatePost'] = async (ctx, input) => {
-	const { post_id, ...body } = input;
-	const result = await makeFacebookRequest<
+	const { post_id, page_id, ...body } = input;
+	const pageId = resolvePageId(page_id, post_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['updatePost']
-	>(`/${post_id}`, ctx.key, {
+	>(`/${post_id}`, ctx, pageId, {
 		method: 'POST',
 		body: omitUndefined(body),
 	});
@@ -125,9 +129,10 @@ export const update: FacebookEndpoints['updatePost'] = async (ctx, input) => {
 };
 
 export const remove: FacebookEndpoints['deletePost'] = async (ctx, input) => {
-	const result = await makeFacebookRequest<
+	const pageId = resolvePageId(input.page_id, input.post_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['deletePost']
-	>(`/${input.post_id}`, ctx.key, {
+	>(`/${input.post_id}`, ctx, pageId, {
 		method: 'DELETE',
 	});
 
@@ -147,10 +152,11 @@ export const reschedule: FacebookEndpoints['reschedulePost'] = async (
 	ctx,
 	input,
 ) => {
-	const { post_id, scheduled_publish_time } = input;
-	const result = await makeFacebookRequest<
+	const { post_id, page_id, scheduled_publish_time } = input;
+	const pageId = resolvePageId(page_id, post_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['reschedulePost']
-	>(`/${post_id}`, ctx.key, {
+	>(`/${post_id}`, ctx, pageId, {
 		method: 'POST',
 		body: { scheduled_publish_time },
 	});
@@ -161,11 +167,12 @@ export const reschedule: FacebookEndpoints['reschedulePost'] = async (
 
 export const publishScheduled: FacebookEndpoints['publishScheduledPost'] =
 	async (ctx, input) => {
-		const result = await makeFacebookRequest<
+		const pageId = resolvePageId(input.page_id, input.post_id);
+		const result = await makePageFacebookRequest<
 			FacebookEndpointOutputs['publishScheduledPost']
-		>(`/${input.post_id}`, ctx.key, {
+		>(`/${input.post_id}`, ctx, pageId, {
 			method: 'POST',
-			body: { published: true },
+			body: { is_published: true },
 		});
 
 		await logFacebookEvent(ctx, 'facebook.posts.publishScheduled', {
@@ -183,8 +190,7 @@ export const listTagged: FacebookEndpoints['getPageTaggedPosts'] = async (
 	>(`/${input.page_id}/tagged`, ctx, input.page_id, {
 		query: buildPaginationQuery({
 			fields:
-				input.fields ??
-				'id,message,created_time,permalink_url,full_picture',
+				input.fields ?? 'id,message,created_time,permalink_url,full_picture',
 			limit: input.limit,
 			after: input.after,
 			before: input.before,
@@ -199,13 +205,32 @@ export const getInsights: FacebookEndpoints['getPostInsights'] = async (
 	ctx,
 	input,
 ) => {
-	const result = await makeFacebookRequest<
+	const pageId = resolvePageId(input.page_id, input.post_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['getPostInsights']
-	>(`/${input.post_id}/insights`, ctx.key, {
+	>(`/${input.post_id}/insights`, ctx, pageId, {
 		query: {
 			metric: formatMetric(input.metric),
 		},
 	});
+
+	if (result.data) {
+		for (const insight of result.data) {
+			const insightId = insight.id ?? `${input.post_id}:${insight.name}`;
+			try {
+				await ctx.db.insights.upsertByEntityId(insightId, {
+					insightId,
+					objectId: input.post_id,
+					name: insight.name,
+					period: insight.period,
+					value: insight.values?.[0]?.value,
+					endTime: insight.values?.[0]?.end_time,
+				});
+			} catch {
+				// Non-fatal cache write
+			}
+		}
+	}
 
 	await logFacebookEvent(ctx, 'facebook.posts.getInsights', { ...input });
 	return result;
@@ -215,10 +240,11 @@ export const getReactions: FacebookEndpoints['getPostReactions'] = async (
 	ctx,
 	input,
 ) => {
-	const { post_id, type, ...pagination } = input;
-	const result = await makeFacebookRequest<
+	const { post_id, page_id, type, ...pagination } = input;
+	const pageId = resolvePageId(page_id, post_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['getPostReactions']
-	>(`/${post_id}/reactions`, ctx.key, {
+	>(`/${post_id}/reactions`, ctx, pageId, {
 		query: omitUndefined({
 			type,
 			limit: pagination.limit,
@@ -231,15 +257,12 @@ export const getReactions: FacebookEndpoints['getPostReactions'] = async (
 		for (const reaction of result.data) {
 			if (!reaction.id) continue;
 			try {
-				await ctx.db.reactions.upsertByEntityId(
-					`${post_id}:${reaction.id}`,
-					{
-						objectId: post_id,
-						userId: reaction.id,
-						name: reaction.name,
-						type: reaction.type,
-					},
-				);
+				await ctx.db.reactions.upsertByEntityId(`${post_id}:${reaction.id}`, {
+					objectId: post_id,
+					userId: reaction.id,
+					name: reaction.name,
+					type: reaction.type,
+				});
 			} catch {
 				// Non-fatal cache write
 			}

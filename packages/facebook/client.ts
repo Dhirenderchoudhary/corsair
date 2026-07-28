@@ -58,7 +58,10 @@ type GraphErrorBody = {
 	};
 };
 
-function extractGraphError(error: unknown): GraphErrorBody['error'] | undefined {
+function extractGraphError(
+	error: unknown,
+): GraphErrorBody['error'] | undefined {
+	// corsair/http ApiError shapes vary slightly across transports; check known nests.
 	const err = error as {
 		body?: GraphErrorBody;
 		response?: {
@@ -67,9 +70,7 @@ function extractGraphError(error: unknown): GraphErrorBody['error'] | undefined 
 		};
 	};
 	return (
-		err?.body?.error ??
-		err?.response?.body?.error ??
-		err?.response?.data?.error
+		err?.body?.error ?? err?.response?.body?.error ?? err?.response?.data?.error
 	);
 }
 
@@ -125,10 +126,7 @@ export async function makeFacebookRequest<T>(
 				: undefined,
 		formData,
 		mediaType: formData ? undefined : 'application/json; charset=utf-8',
-		query:
-			method === 'GET' || method === 'DELETE'
-				? { ...query }
-				: query,
+		query: method === 'GET' || method === 'DELETE' ? { ...query } : query,
 	};
 
 	try {
@@ -151,14 +149,58 @@ export async function makeFacebookRequest<T>(
 	}
 }
 
+export type FacebookPageTokenCache = {
+	findByEntityId: (
+		entityId: string,
+	) => Promise<{ data?: { accessToken?: string | null } } | null>;
+	upsertByEntityId: (
+		entityId: string,
+		data: Record<string, unknown>,
+	) => Promise<unknown>;
+};
+
 export type FacebookRequestContext = {
 	key: string;
+	db?: {
+		pages?: FacebookPageTokenCache;
+	};
 };
+
+/**
+ * Extract the Page ID from a composite Graph post ID (`PageID_PostID`).
+ * Falls back to an explicit `page_id` when provided.
+ */
+export function resolvePageId(
+	pageId: string | undefined,
+	objectId: string,
+): string {
+	if (pageId) return pageId;
+	const separator = objectId.indexOf('_');
+	if (separator > 0) {
+		return objectId.slice(0, separator);
+	}
+	throw new FacebookAPIError(
+		`page_id is required when "${objectId}" is not a composite PageID_PostID identifier.`,
+	);
+}
 
 export async function resolvePageAccessToken(
 	userAccessToken: string,
 	pageId: string,
+	ctx?: FacebookRequestContext,
 ): Promise<string> {
+	if (ctx?.db?.pages) {
+		try {
+			const cached = await ctx.db.pages.findByEntityId(pageId);
+			const cachedToken = cached?.data?.accessToken;
+			if (cachedToken) {
+				return cachedToken;
+			}
+		} catch {
+			// Non-fatal cache miss — fall through to live Graph resolve
+		}
+	}
+
 	const page = await makeFacebookRequest<{ access_token?: string }>(
 		`/${pageId}`,
 		userAccessToken,
@@ -174,6 +216,19 @@ export async function resolvePageAccessToken(
 		);
 	}
 
+	if (ctx?.db?.pages) {
+		try {
+			const existing = await ctx.db.pages.findByEntityId(pageId);
+			await ctx.db.pages.upsertByEntityId(pageId, {
+				...(existing?.data ?? {}),
+				facebookId: pageId,
+				accessToken: page.access_token,
+			});
+		} catch {
+			// Non-fatal cache write
+		}
+	}
+
 	return page.access_token;
 }
 
@@ -183,6 +238,6 @@ export async function makePageFacebookRequest<T>(
 	pageId: string,
 	options: FacebookRequestOptions = {},
 ): Promise<T> {
-	const pageToken = await resolvePageAccessToken(ctx.key, pageId);
+	const pageToken = await resolvePageAccessToken(ctx.key, pageId, ctx);
 	return makeFacebookRequest<T>(endpoint, pageToken, options);
 }

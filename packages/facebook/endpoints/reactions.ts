@@ -1,18 +1,29 @@
-import { makeFacebookRequest } from '../client';
+import {
+	FacebookAPIError,
+	makePageFacebookRequest,
+	resolvePageId,
+} from '../client';
 import type { FacebookEndpoints } from '../index';
+import { logFacebookEvent } from './shared';
 import type { FacebookEndpointOutputs } from './types';
-import { logFacebookEvent, omitUndefined } from './shared';
 
+/**
+ * Graph only supports adding LIKE reactions programmatically for Page content.
+ * Non-LIKE types are rejected rather than silently falling back.
+ */
 export const add: FacebookEndpoints['addReaction'] = async (ctx, input) => {
-	const { object_id, type } = input;
-	const endpoint =
-		type && type !== 'LIKE' ? `/${object_id}/reactions` : `/${object_id}/likes`;
+	const { object_id, page_id, type } = input;
+	if (type && type !== 'LIKE') {
+		throw new FacebookAPIError(
+			`Facebook Graph API only supports adding LIKE reactions programmatically. Received type="${type}".`,
+		);
+	}
 
-	const result = await makeFacebookRequest<
+	const pageId = resolvePageId(page_id, object_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['addReaction']
-	>(endpoint, ctx.key, {
+	>(`/${object_id}/likes`, ctx, pageId, {
 		method: 'POST',
-		body: omitUndefined({ type: type && type !== 'LIKE' ? type : undefined }),
 	});
 
 	await logFacebookEvent(ctx, 'facebook.reactions.add', { ...input });
@@ -23,9 +34,10 @@ export const unlike: FacebookEndpoints['unlikePostOrComment'] = async (
 	ctx,
 	input,
 ) => {
-	const result = await makeFacebookRequest<
+	const pageId = resolvePageId(input.page_id, input.object_id);
+	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['unlikePostOrComment']
-	>(`/${input.object_id}/likes`, ctx.key, {
+	>(`/${input.object_id}/likes`, ctx, pageId, {
 		method: 'DELETE',
 	});
 

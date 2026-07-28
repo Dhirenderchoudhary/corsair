@@ -382,7 +382,8 @@ const facebookEndpointMeta = {
 	},
 	'pages.search': {
 		riskLevel: 'read',
-		description: 'Search public Facebook Pages.',
+		description:
+			'DEPRECATED for standard Facebook apps: /pages/search is Workplace-only.',
 	},
 	'pages.updateSettings': {
 		riskLevel: 'write',
@@ -414,7 +415,8 @@ const facebookEndpointMeta = {
 	},
 	'posts.list': {
 		riskLevel: 'read',
-		description: 'List posts published on a Facebook Page.',
+		description:
+			'List Page timeline content via /feed (page posts + visitor posts + tagged posts).',
 	},
 	'posts.listScheduled': {
 		riskLevel: 'read',
@@ -600,6 +602,7 @@ export function facebook<const T extends FacebookPluginOptions>(
 				'pages_read_user_content',
 				'publish_video',
 				'business_management',
+				'read_insights',
 			],
 		},
 		pluginWebhookMatcher: () => false,
@@ -626,13 +629,12 @@ export function facebook<const T extends FacebookPluginOptions>(
 	} satisfies InternalFacebookPlugin;
 }
 
-export type {
-	FacebookEndpointInputs,
-	FacebookEndpointOutputs,
-} from './endpoints/types';
-
 export {
 	FACEBOOK_API_BASE,
 	FACEBOOK_GRAPH_API_VERSION,
 	FacebookAPIError,
 } from './client';
+export type {
+	FacebookEndpointInputs,
+	FacebookEndpointOutputs,
+} from './endpoints/types';

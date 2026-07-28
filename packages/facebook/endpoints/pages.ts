@@ -1,14 +1,12 @@
-import {
-	makeFacebookRequest,
-	makePageFacebookRequest,
-} from '../client';
+import { makeFacebookRequest, makePageFacebookRequest } from '../client';
 import type { FacebookEndpoints } from '../index';
-import type { FacebookEndpointOutputs } from './types';
 import {
 	buildPaginationQuery,
 	logFacebookEvent,
 	omitUndefined,
+	upsertPageEntity,
 } from './shared';
+import type { FacebookEndpointOutputs } from './types';
 
 function formatMetric(metric: string | string[]): string {
 	return Array.isArray(metric) ? metric.join(',') : metric;
@@ -29,19 +27,15 @@ export const getDetails: FacebookEndpoints['getPageDetails'] = async (
 	});
 
 	if (result.id) {
-		try {
-			await ctx.db.pages.upsertByEntityId(result.id, {
-				facebookId: result.id,
-				name: result.name,
-				category: result.category,
-				about: result.about,
-				link: result.link,
-				phone: result.phone,
-				website: result.website,
-			});
-		} catch {
-			// Non-fatal cache write
-		}
+		await upsertPageEntity(ctx, result.id, {
+			facebookId: result.id,
+			name: result.name,
+			category: result.category,
+			about: result.about,
+			link: result.link,
+			phone: result.phone,
+			website: result.website,
+		});
 	}
 
 	await logFacebookEvent(ctx, 'facebook.pages.getDetails', { ...input });
@@ -95,6 +89,25 @@ export const getInsights: FacebookEndpoints['getPageInsights'] = async (
 			until,
 		}),
 	});
+
+	if (result.data) {
+		for (const insight of result.data) {
+			const insightId =
+				insight.id ?? `${page_id}:${insight.name}:${period ?? 'default'}`;
+			try {
+				await ctx.db.insights.upsertByEntityId(insightId, {
+					insightId,
+					objectId: page_id,
+					name: insight.name,
+					period: insight.period ?? period,
+					value: insight.values?.[0]?.value,
+					endTime: insight.values?.[0]?.end_time,
+				});
+			} catch {
+				// Non-fatal cache write
+			}
+		}
+	}
 
 	await logFacebookEvent(ctx, 'facebook.pages.getInsights', { ...input });
 	return result;

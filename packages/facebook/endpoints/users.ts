@@ -1,11 +1,11 @@
 import { makeFacebookRequest } from '../client';
 import type { FacebookEndpoints } from '../index';
-import type { FacebookEndpointOutputs } from './types';
 import {
 	buildPaginationQuery,
 	logFacebookEvent,
-	omitUndefined,
+	upsertPageEntity,
 } from './shared';
+import type { FacebookEndpointOutputs } from './types';
 
 export const getCurrentUser: FacebookEndpoints['getCurrentUser'] = async (
 	ctx,
@@ -44,8 +44,7 @@ export const getUserPages: FacebookEndpoints['getUserPages'] = async (
 	>('/me/accounts', ctx.key, {
 		query: buildPaginationQuery({
 			fields:
-				input.fields ??
-				'id,name,access_token,category,category_list,tasks',
+				input.fields ?? 'id,name,access_token,category,category_list,tasks',
 			limit: input.limit,
 			after: input.after,
 			before: input.before,
@@ -65,8 +64,7 @@ export const listManagedPages: FacebookEndpoints['listManagedPages'] = async (
 	>('/me/accounts', ctx.key, {
 		query: buildPaginationQuery({
 			fields:
-				input.fields ??
-				'id,name,access_token,category,category_list,tasks',
+				input.fields ?? 'id,name,access_token,category,category_list,tasks',
 			limit: input.limit,
 			after: input.after,
 			before: input.before,
@@ -76,17 +74,13 @@ export const listManagedPages: FacebookEndpoints['listManagedPages'] = async (
 	if (result.data) {
 		for (const page of result.data) {
 			if (!page.id) continue;
-			try {
-				await ctx.db.pages.upsertByEntityId(page.id, {
-					facebookId: page.id,
-					name: page.name,
-					accessToken: page.access_token,
-					category: page.category,
-					tasks: page.tasks,
-				});
-			} catch {
-				// Non-fatal cache write
-			}
+			await upsertPageEntity(ctx, page.id, {
+				facebookId: page.id,
+				name: page.name,
+				accessToken: page.access_token,
+				category: page.category,
+				tasks: page.tasks,
+			});
 		}
 	}
 

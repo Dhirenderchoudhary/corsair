@@ -1,18 +1,25 @@
 import { makePageFacebookRequest } from '../client';
 import type { FacebookEndpoints } from '../index';
-import type { FacebookEndpointOutputs } from './types';
 import {
 	buildPaginationQuery,
 	logFacebookEvent,
 	omitUndefined,
 } from './shared';
+import type { FacebookEndpointOutputs } from './types';
 
 export const createPost: FacebookEndpoints['createVideoPost'] = async (
 	ctx,
 	input,
 ) => {
-	const { page_id, file_url, title, description, published, scheduled_publish_time } =
-		input;
+	const {
+		page_id,
+		file_url,
+		title,
+		description,
+		published,
+		scheduled_publish_time,
+	} = input;
+	const shouldSchedule = scheduled_publish_time !== undefined;
 	const result = await makePageFacebookRequest<
 		FacebookEndpointOutputs['createVideoPost']
 	>(`/${page_id}/videos`, ctx, page_id, {
@@ -21,7 +28,7 @@ export const createPost: FacebookEndpoints['createVideoPost'] = async (
 			file_url,
 			title,
 			description,
-			published,
+			published: published ?? (shouldSchedule ? false : true),
 			scheduled_publish_time,
 		}),
 	});
