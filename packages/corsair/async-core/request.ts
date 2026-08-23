@@ -91,7 +91,11 @@ const getUrl = (config: OpenAPIConfig, options: ApiRequestOptions): string => {
 
 	let path = options.url
 		.replace('{api-version}', config.VERSION)
-		.replace(/{(.*?)}/g, (substring: string, group: string) => {
+		// `[^{}]*` rather than `.*?`: the lazy form rescans the remainder of the
+		// string from every `{`, which is quadratic on inputs carrying many
+		// unclosed braces. The negated class cannot backtrack that way and
+		// matches identically for well-formed `{param}` templates.
+		.replace(/\{([^{}]*)\}/g, (substring: string, group: string) => {
 			if (options.path?.hasOwnProperty(group)) {
 				return encoder(String(options.path[group]));
 			}
