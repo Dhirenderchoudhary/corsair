@@ -27,14 +27,16 @@ const rows = await corsair.uploadcare.db.UploadcareFile.search({
 |-------|------|-----------|
 | `entity_id` | `string` | equals, contains, startsWith, endsWith, in |
 | `uuid` | `string` | equals, contains, startsWith, endsWith, in |
-| `original_filename` | `string` | equals, contains, startsWith, endsWith, in |
-| `size` | `number` | equals, gt, gte, lt, lte, in |
-| `is_ready` | `boolean` | equals |
+| `datetime_uploaded` | `string` | equals, contains, startsWith, endsWith, in |
+| `datetime_stored` | `string` | equals, contains, startsWith, endsWith, in |
+| `datetime_removed` | `string` | equals, contains, startsWith, endsWith, in |
 | `is_image` | `boolean` | equals |
+| `is_ready` | `boolean` | equals |
 | `mime_type` | `string` | equals, contains, startsWith, endsWith, in |
-| `datetime_uploaded` | `date` | equals, before, after, between |
-| `datetime_stored` | `date` | equals, before, after, between |
-| `datetime_removed` | `date` | equals, before, after, between |
+| `original_filename` | `string` | equals, contains, startsWith, endsWith, in |
+| `original_file_url` | `string` | equals, contains, startsWith, endsWith, in |
+| `size` | `number` | equals, gt, gte, lt, lte, in |
+| `url` | `string` | equals, contains, startsWith, endsWith, in |
 
 _Every `.search()` also accepts `limit` and `offset` for pagination. `.list()` is available on the same path without the `.search` suffix in code — see [database operations](/concepts/database)._
 
@@ -58,9 +60,10 @@ const rows = await corsair.uploadcare.db.UploadcareGroup.search({
 |-------|------|-----------|
 | `entity_id` | `string` | equals, contains, startsWith, endsWith, in |
 | `id` | `string` | equals, contains, startsWith, endsWith, in |
-| `datetime_created` | `date` | equals, before, after, between |
-| `datetime_stored` | `date` | equals, before, after, between |
+| `datetime_created` | `string` | equals, contains, startsWith, endsWith, in |
 | `files_count` | `number` | equals, gt, gte, lt, lte, in |
+| `cdn_url` | `string` | equals, contains, startsWith, endsWith, in |
+| `url` | `string` | equals, contains, startsWith, endsWith, in |
 
 _Every `.search()` also accepts `limit` and `offset` for pagination. `.list()` is available on the same path without the `.search` suffix in code — see [database operations](/concepts/database)._
 

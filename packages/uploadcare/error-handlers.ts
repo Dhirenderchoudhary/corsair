@@ -38,7 +38,7 @@ export const errorHandlers = {
 			return (
 				msg.includes('unauthorized') ||
 				msg.includes('invalid_auth') ||
-				msg.includes('simple')
+				msg.includes('authentication')
 			);
 		},
 		handler: async () => ({ maxRetries: 0 }),

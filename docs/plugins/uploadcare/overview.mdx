@@ -1,13 +1,16 @@
 ---
 title: Overview
-description: "Uploadcare plugin for Corsair"
+description: "File uploading, storage, processing, and delivery for web and mobile apps."
 ---
 
 Use **Uploadcare** through Corsair: one client, typed API calls, local DB sync, and incoming webhooks.
 
+REST calls use `Uploadcare.Simple public_key:secret_key` against `https://api.uploadcare.com/`
+with `Accept: application/vnd.uploadcare-v0.7+json`. Upload API calls use the public key only.
+
 **What you get:**
 
-- 13 typed API operations
+- 33 typed API operations
 - 2 synced entities (`UploadcareFile`, `UploadcareGroup`) for fast `.search()` / `.list()`
 - 1 incoming webhook event types
 
@@ -90,19 +93,19 @@ const { connectUrl } = await corsair.manage.connect.createLink({
 
 ## Example API calls
 
-**`files.get`**
+**List stored files**
 
 ```ts
 const tenant = corsair.withTenant('acme');
-await tenant.uploadcare.api.files.get({});
+await tenant.uploadcare.api.files.list({ limit: 10, stored: true });
 ```
 
 
-**`files.batchDelete`**
+**Store a file**
 
 ```ts
 const tenant = corsair.withTenant('acme');
-await tenant.uploadcare.api.files.batchDelete({});
+await tenant.uploadcare.api.files.store({ uuid: '22240276-2f06-41f8-9411-755c8ce926ed' });
 ```
 
 

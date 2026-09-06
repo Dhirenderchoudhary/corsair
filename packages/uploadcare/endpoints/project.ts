@@ -5,17 +5,10 @@ import type { UploadcareProject } from './types';
 
 export const get: UploadcareEndpoints['projectGet'] = async (ctx, input) => {
 	const response = await makeUploadcareRequest<UploadcareProject>(
-		'project/',
+		'/project/',
 		ctx.key,
-		{
-			method: 'GET',
-		},
+		{ method: 'GET' },
 	);
-	await logEventFromContext(
-		ctx,
-		'uploadcare.project.get',
-		{ ...input },
-		'completed',
-	);
+	await logEventFromContext(ctx, 'uploadcare.project.get', input, 'completed');
 	return response;
 };

@@ -5,35 +5,36 @@ import type { GroupsListResponse, UploadcareGroup } from './types';
 
 export const list: UploadcareEndpoints['groupsList'] = async (ctx, input) => {
 	const response = await makeUploadcareRequest<GroupsListResponse>(
-		'groups/',
+		'/groups/',
 		ctx.key,
-		{
-			method: 'GET',
-			query: input,
-		},
+		{ method: 'GET', query: input },
 	);
-	await logEventFromContext(
-		ctx,
-		'uploadcare.groups.list',
-		{ ...input },
-		'completed',
-	);
+	await logEventFromContext(ctx, 'uploadcare.groups.list', input, 'completed');
 	return response;
 };
 
 export const get: UploadcareEndpoints['groupGet'] = async (ctx, input) => {
 	const response = await makeUploadcareRequest<UploadcareGroup>(
-		`groups/${input.group_id}/`,
+		`/groups/${input.group_id}/`,
 		ctx.key,
-		{
-			method: 'GET',
-		},
+		{ method: 'GET' },
 	);
+	await logEventFromContext(ctx, 'uploadcare.groups.get', input, 'completed');
+	return response;
+};
+
+export const deleteGroup: UploadcareEndpoints['groupDelete'] = async (
+	ctx,
+	input,
+) => {
+	await makeUploadcareRequest<void>(`/groups/${input.group_id}/`, ctx.key, {
+		method: 'DELETE',
+	});
 	await logEventFromContext(
 		ctx,
-		'uploadcare.groups.get',
-		{ ...input },
+		'uploadcare.groups.delete',
+		input,
 		'completed',
 	);
-	return response;
+	return { success: true as const };
 };

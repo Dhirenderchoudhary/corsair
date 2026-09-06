@@ -14,7 +14,53 @@ export class UploadcareAPIError extends Error {
 	}
 }
 
-const UPLOADCARE_API_BASE = 'https://api.uploadcare.com';
+const REST_BASE = 'https://api.uploadcare.com';
+const UPLOAD_BASE = 'https://upload.uploadcare.com';
+
+export function publicKeyFromAuth(apiKey: string): string {
+	const raw = apiKey.startsWith('Uploadcare.Simple ')
+		? apiKey.slice('Uploadcare.Simple '.length)
+		: apiKey;
+	return raw.split(':')[0] ?? raw;
+}
+
+function simpleAuthHeader(apiKey: string): string {
+	return apiKey.startsWith('Uploadcare.Simple ')
+		? apiKey
+		: `Uploadcare.Simple ${apiKey}`;
+}
+
+function errorMessage(body: unknown, fallback: string): string {
+	if (body && typeof body === 'object') {
+		if ('detail' in body && body.detail != null) return String(body.detail);
+		if ('message' in body && body.message != null) return String(body.message);
+		if ('error' in body && body.error != null) return String(body.error);
+	}
+	return fallback;
+}
+
+function errorCode(body: unknown): string | undefined {
+	if (body && typeof body === 'object' && 'code' in body && body.code != null) {
+		return String(body.code);
+	}
+	return undefined;
+}
+
+function wrapRequestError(error: unknown): never {
+	if (error instanceof ApiError) {
+		throw new UploadcareAPIError(
+			errorMessage(error.body, error.message),
+			errorCode(error.body),
+			error.status,
+			error.body,
+			error.retryAfter,
+		);
+	}
+	if (error instanceof Error) {
+		throw new UploadcareAPIError(error.message);
+	}
+	throw new UploadcareAPIError('Unknown error');
+}
 
 export async function makeUploadcareRequest<T>(
 	endpoint: string,
@@ -23,57 +69,69 @@ export async function makeUploadcareRequest<T>(
 		method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 		body?: unknown;
 		query?: Record<string, string | number | boolean | undefined>;
+		mediaType?: string;
+		formData?: Record<string, string | number | boolean | undefined>;
 	} = {},
 ): Promise<T> {
-	const { method = 'GET', body, query } = options;
-
-	const authHeader = apiKey.startsWith('Uploadcare.Simple ')
-		? apiKey
-		: `Uploadcare.Simple ${apiKey}`;
+	const { method = 'GET', body, query, mediaType, formData } = options;
 
 	const config: OpenAPIConfig = {
-		BASE: UPLOADCARE_API_BASE,
+		BASE: REST_BASE,
 		VERSION: '0.7.0',
 		WITH_CREDENTIALS: false,
 		CREDENTIALS: 'omit',
 		HEADERS: {
-			'Content-Type': 'application/json',
 			Accept: 'application/vnd.uploadcare-v0.7+json',
-			Authorization: authHeader,
+			Authorization: simpleAuthHeader(apiKey),
 		},
 	};
 
 	const requestOptions: ApiRequestOptions = {
 		method,
-		url: endpoint,
+		url: endpoint.startsWith('/') ? endpoint : `/${endpoint}`,
 		body: body !== undefined ? body : undefined,
-		mediaType: 'application/json; charset=utf-8',
+		formData,
+		mediaType:
+			mediaType ??
+			(body !== undefined ? 'application/json; charset=utf-8' : undefined),
 		query,
 	};
 
 	try {
 		return await request<T>(config, requestOptions);
-	} catch (error: any) {
-		if (error instanceof ApiError) {
-			const msg =
-				typeof error.body === 'object' && error.body && 'detail' in error.body
-					? String((error.body as any).detail)
-					: typeof error.body === 'object' &&
-							error.body &&
-							'message' in error.body
-						? String((error.body as any).message)
-						: error.message;
-			throw new UploadcareAPIError(
-				msg || error.message,
-				(error.body as any)?.code,
-				error.status,
-				error.body,
-				error.retryAfter,
-			);
-		}
-		if (error instanceof Error) {
-			throw new UploadcareAPIError(error.message);
-		}
-		throw new UploadcareAPIError('Unknown error');
+	} catch (error: unknown) {
+		wrapRequestError(error);
+	}
+}
+
+export async function makeUploadcareUploadRequest<T>(
+	endpoint: string,
+	options: {
+		method?: 'GET' | 'POST';
+		query?: Record<string, string | number | boolean | undefined>;
+		formData?: Record<string, string | number | boolean | undefined>;
+	} = {},
+): Promise<T> {
+	const { method = 'POST', query, formData } = options;
+
+	const config: OpenAPIConfig = {
+		BASE: UPLOAD_BASE,
+		VERSION: '0.7.0',
+		WITH_CREDENTIALS: false,
+		CREDENTIALS: 'omit',
+		HEADERS: {},
+	};
+
+	const requestOptions: ApiRequestOptions = {
+		method,
+		url: endpoint.startsWith('/') ? endpoint : `/${endpoint}`,
+		formData,
+		query,
+	};
+
+	try {
+		return await request<T>(config, requestOptions);
+	} catch (error: unknown) {
+		wrapRequestError(error);
 	}
 }

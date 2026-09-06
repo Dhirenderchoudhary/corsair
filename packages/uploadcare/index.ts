@@ -15,7 +15,15 @@ import type {
 	RequiredPluginEndpointSchemas,
 	RequiredPluginWebhookSchemas,
 } from 'corsair/core';
-import { Files, Groups, Project, Webhooks } from './endpoints';
+import {
+	Addons,
+	Cdn,
+	Files,
+	Groups,
+	Project,
+	Upload,
+	Webhooks,
+} from './endpoints';
 import type {
 	UploadcareEndpointInputs,
 	UploadcareEndpointOutputs,
@@ -64,19 +72,7 @@ type UploadcareEndpoint<K extends keyof UploadcareEndpointOutputs> =
 	>;
 
 export type UploadcareEndpoints = {
-	filesList: UploadcareEndpoint<'filesList'>;
-	fileGet: UploadcareEndpoint<'fileGet'>;
-	fileStore: UploadcareEndpoint<'fileStore'>;
-	fileDelete: UploadcareEndpoint<'fileDelete'>;
-	batchStoreFiles: UploadcareEndpoint<'batchStoreFiles'>;
-	batchDeleteFiles: UploadcareEndpoint<'batchDeleteFiles'>;
-	groupsList: UploadcareEndpoint<'groupsList'>;
-	groupGet: UploadcareEndpoint<'groupGet'>;
-	projectGet: UploadcareEndpoint<'projectGet'>;
-	webhooksList: UploadcareEndpoint<'webhooksList'>;
-	webhookCreate: UploadcareEndpoint<'webhookCreate'>;
-	webhookUpdate: UploadcareEndpoint<'webhookUpdate'>;
-	webhookDelete: UploadcareEndpoint<'webhookDelete'>;
+	[K in keyof UploadcareEndpointOutputs]: UploadcareEndpoint<K>;
 };
 
 type UploadcareWebhook<
@@ -98,10 +94,16 @@ const uploadcareEndpointsNested = {
 		delete: Files.delete,
 		batchStore: Files.batchStore,
 		batchDelete: Files.batchDelete,
+		copyLocal: Files.copyLocal,
+		getMetadata: Files.getMetadata,
+		getMetadataKey: Files.getMetadataKey,
+		updateMetadataKey: Files.updateMetadataKey,
+		deleteMetadataKey: Files.deleteMetadataKey,
 	},
 	groups: {
 		list: Groups.list,
 		get: Groups.get,
+		delete: Groups.delete,
 	},
 	project: {
 		get: Project.get,
@@ -111,6 +113,26 @@ const uploadcareEndpointsNested = {
 		create: Webhooks.create,
 		update: Webhooks.update,
 		delete: Webhooks.delete,
+		deleteByUrl: Webhooks.deleteByUrl,
+	},
+	upload: {
+		fromUrl: Upload.fromUrl,
+		fromUrlStatus: Upload.fromUrlStatus,
+		fileInfo: Upload.fileInfo,
+		createGroup: Upload.createGroup,
+		groupInfo: Upload.groupInfo,
+		startMultipart: Upload.startMultipart,
+	},
+	addons: {
+		executeClamav: Addons.executeClamav,
+		clamavStatus: Addons.clamavStatus,
+		rekognitionStatus: Addons.rekognitionStatus,
+		rekognitionModerationStatus: Addons.rekognitionModerationStatus,
+		removeBgStatus: Addons.removeBgStatus,
+	},
+	cdn: {
+		mirror: Cdn.mirror,
+		rotate: Cdn.rotate,
 	},
 } as const;
 
@@ -145,6 +167,26 @@ export const uploadcareEndpointSchemas = {
 		input: UploadcareEndpointInputSchemas.batchDeleteFiles,
 		output: UploadcareEndpointOutputSchemas.batchDeleteFiles,
 	},
+	'files.copyLocal': {
+		input: UploadcareEndpointInputSchemas.copyLocal,
+		output: UploadcareEndpointOutputSchemas.copyLocal,
+	},
+	'files.getMetadata': {
+		input: UploadcareEndpointInputSchemas.getFileMetadata,
+		output: UploadcareEndpointOutputSchemas.getFileMetadata,
+	},
+	'files.getMetadataKey': {
+		input: UploadcareEndpointInputSchemas.getFileMetadataKey,
+		output: UploadcareEndpointOutputSchemas.getFileMetadataKey,
+	},
+	'files.updateMetadataKey': {
+		input: UploadcareEndpointInputSchemas.updateFileMetadataKey,
+		output: UploadcareEndpointOutputSchemas.updateFileMetadataKey,
+	},
+	'files.deleteMetadataKey': {
+		input: UploadcareEndpointInputSchemas.deleteFileMetadataKey,
+		output: UploadcareEndpointOutputSchemas.deleteFileMetadataKey,
+	},
 	'groups.list': {
 		input: UploadcareEndpointInputSchemas.groupsList,
 		output: UploadcareEndpointOutputSchemas.groupsList,
@@ -152,6 +194,10 @@ export const uploadcareEndpointSchemas = {
 	'groups.get': {
 		input: UploadcareEndpointInputSchemas.groupGet,
 		output: UploadcareEndpointOutputSchemas.groupGet,
+	},
+	'groups.delete': {
+		input: UploadcareEndpointInputSchemas.groupDelete,
+		output: UploadcareEndpointOutputSchemas.groupDelete,
 	},
 	'project.get': {
 		input: UploadcareEndpointInputSchemas.projectGet,
@@ -173,6 +219,62 @@ export const uploadcareEndpointSchemas = {
 		input: UploadcareEndpointInputSchemas.webhookDelete,
 		output: UploadcareEndpointOutputSchemas.webhookDelete,
 	},
+	'webhooks.deleteByUrl': {
+		input: UploadcareEndpointInputSchemas.webhookDeleteByUrl,
+		output: UploadcareEndpointOutputSchemas.webhookDeleteByUrl,
+	},
+	'upload.fromUrl': {
+		input: UploadcareEndpointInputSchemas.uploadFromUrl,
+		output: UploadcareEndpointOutputSchemas.uploadFromUrl,
+	},
+	'upload.fromUrlStatus': {
+		input: UploadcareEndpointInputSchemas.getUrlUploadStatus,
+		output: UploadcareEndpointOutputSchemas.getUrlUploadStatus,
+	},
+	'upload.fileInfo': {
+		input: UploadcareEndpointInputSchemas.getUploadedFileInfo,
+		output: UploadcareEndpointOutputSchemas.getUploadedFileInfo,
+	},
+	'upload.createGroup': {
+		input: UploadcareEndpointInputSchemas.createFileGroupUpload,
+		output: UploadcareEndpointOutputSchemas.createFileGroupUpload,
+	},
+	'upload.groupInfo': {
+		input: UploadcareEndpointInputSchemas.getFileGroupInfoUpload,
+		output: UploadcareEndpointOutputSchemas.getFileGroupInfoUpload,
+	},
+	'upload.startMultipart': {
+		input: UploadcareEndpointInputSchemas.startMultipartUpload,
+		output: UploadcareEndpointOutputSchemas.startMultipartUpload,
+	},
+	'addons.executeClamav': {
+		input: UploadcareEndpointInputSchemas.executeClamavScan,
+		output: UploadcareEndpointOutputSchemas.executeClamavScan,
+	},
+	'addons.clamavStatus': {
+		input: UploadcareEndpointInputSchemas.getClamavScanStatus,
+		output: UploadcareEndpointOutputSchemas.getClamavScanStatus,
+	},
+	'addons.rekognitionStatus': {
+		input: UploadcareEndpointInputSchemas.getAwsRekognitionExecutionStatus,
+		output: UploadcareEndpointOutputSchemas.getAwsRekognitionExecutionStatus,
+	},
+	'addons.rekognitionModerationStatus': {
+		input: UploadcareEndpointInputSchemas.checkAwsRekognitionModerationStatus,
+		output: UploadcareEndpointOutputSchemas.checkAwsRekognitionModerationStatus,
+	},
+	'addons.removeBgStatus': {
+		input: UploadcareEndpointInputSchemas.checkRemoveBgStatus,
+		output: UploadcareEndpointOutputSchemas.checkRemoveBgStatus,
+	},
+	'cdn.mirror': {
+		input: UploadcareEndpointInputSchemas.imageMirror,
+		output: UploadcareEndpointOutputSchemas.imageMirror,
+	},
+	'cdn.rotate': {
+		input: UploadcareEndpointInputSchemas.rotateImage,
+		output: UploadcareEndpointOutputSchemas.rotateImage,
+	},
 } as const satisfies RequiredPluginEndpointSchemas<
 	typeof uploadcareEndpointsNested
 >;
@@ -190,25 +292,123 @@ const uploadcareWebhookSchemas = {
 const defaultAuthType: AuthTypes = 'api_key' as const;
 
 const uploadcareEndpointMeta = {
-	'files.list': { riskLevel: 'read', description: 'List files in project' },
-	'files.get': { riskLevel: 'read', description: 'Get file info by UUID' },
-	'files.store': { riskLevel: 'write', description: 'Store a file' },
-	'files.delete': { riskLevel: 'write', description: 'Delete a file' },
-	'files.batchStore': { riskLevel: 'write', description: 'Batch store files' },
+	'files.list': {
+		riskLevel: 'read',
+		description: 'List files with pagination, stored/removed filters',
+	},
+	'files.get': {
+		riskLevel: 'read',
+		description: 'Get file info by UUID (official REST v0.7)',
+	},
+	'files.store': {
+		riskLevel: 'write',
+		description: 'Permanently store a file by UUID',
+	},
+	'files.delete': {
+		riskLevel: 'write',
+		description: 'Delete a stored file by UUID',
+	},
+	'files.batchStore': {
+		riskLevel: 'write',
+		description: 'Store up to 100 files in one request',
+	},
 	'files.batchDelete': {
 		riskLevel: 'write',
-		description: 'Batch delete files',
+		description: 'Delete up to 100 files; problems lists invalid UUIDs',
+	},
+	'files.copyLocal': {
+		riskLevel: 'write',
+		description: 'Copy a file to local storage in the same project',
+	},
+	'files.getMetadata': {
+		riskLevel: 'read',
+		description: 'Get all metadata key-value pairs for a file',
+	},
+	'files.getMetadataKey': {
+		riskLevel: 'read',
+		description: 'Get one metadata value by key',
+	},
+	'files.updateMetadataKey': {
+		riskLevel: 'write',
+		description: 'Set a metadata key on a file',
+	},
+	'files.deleteMetadataKey': {
+		riskLevel: 'write',
+		description: 'Delete a metadata key from a file',
 	},
 	'groups.list': { riskLevel: 'read', description: 'List file groups' },
 	'groups.get': { riskLevel: 'read', description: 'Get group info by ID' },
-	'project.get': { riskLevel: 'read', description: 'Get project info' },
-	'webhooks.list': {
-		riskLevel: 'read',
-		description: 'List registered webhooks',
+	'groups.delete': {
+		riskLevel: 'write',
+		description: 'Delete a group (files are not deleted)',
 	},
-	'webhooks.create': { riskLevel: 'write', description: 'Create a webhook' },
+	'project.get': { riskLevel: 'read', description: 'Get current project info' },
+	'webhooks.list': { riskLevel: 'read', description: 'List project webhooks' },
+	'webhooks.create': {
+		riskLevel: 'write',
+		description: 'Create a webhook subscription',
+	},
 	'webhooks.update': { riskLevel: 'write', description: 'Update a webhook' },
-	'webhooks.delete': { riskLevel: 'write', description: 'Delete a webhook' },
+	'webhooks.delete': {
+		riskLevel: 'write',
+		description: 'Delete a webhook by ID',
+	},
+	'webhooks.deleteByUrl': {
+		riskLevel: 'write',
+		description: 'Unsubscribe a webhook by target URL (official)',
+	},
+	'upload.fromUrl': {
+		riskLevel: 'write',
+		description: 'Upload a file from a public URL',
+	},
+	'upload.fromUrlStatus': {
+		riskLevel: 'read',
+		description: 'Check from-URL upload status',
+	},
+	'upload.fileInfo': {
+		riskLevel: 'read',
+		description: 'Get uploaded file info from Upload API',
+	},
+	'upload.createGroup': {
+		riskLevel: 'write',
+		description: 'Create a file group via Upload API',
+	},
+	'upload.groupInfo': {
+		riskLevel: 'read',
+		description: 'Get file group info from Upload API',
+	},
+	'upload.startMultipart': {
+		riskLevel: 'write',
+		description: 'Start multipart upload for files over 100MB',
+	},
+	'addons.executeClamav': {
+		riskLevel: 'write',
+		description: 'Start a ClamAV virus scan',
+	},
+	'addons.clamavStatus': {
+		riskLevel: 'read',
+		description: 'Check ClamAV scan status',
+	},
+	'addons.rekognitionStatus': {
+		riskLevel: 'read',
+		description: 'Check AWS Rekognition labels job status',
+	},
+	'addons.rekognitionModerationStatus': {
+		riskLevel: 'read',
+		description: 'Check AWS Rekognition moderation job status',
+	},
+	'addons.removeBgStatus': {
+		riskLevel: 'read',
+		description: 'Check Remove.bg add-on status',
+	},
+	'cdn.mirror': {
+		riskLevel: 'read',
+		description: 'CDN URL for a horizontally mirrored image',
+	},
+	'cdn.rotate': {
+		riskLevel: 'read',
+		description: 'CDN URL for a counterclockwise rotated image',
+	},
 } as const satisfies RequiredPluginEndpointMeta<
 	typeof uploadcareEndpointsNested
 >;
@@ -307,8 +507,6 @@ export function uploadcare<const T extends UploadcarePluginOptions>(
 }
 
 export type {
-	FilesListInput,
-	FilesListResponse,
 	UploadcareEndpointInputs,
 	UploadcareEndpointOutputs,
 } from './endpoints/types';
