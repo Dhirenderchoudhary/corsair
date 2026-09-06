@@ -39,51 +39,50 @@ type GraphqlPayload<T> = {
 	errors?: GraphqlError[];
 };
 
-function extractErrorMessage(body: unknown): string | undefined {
+type ErrorBody = {
+	detail?: string;
+	title?: string;
+	message?: string;
+	errors?: GraphqlError[];
+};
+
+export type RunpodGraphqlVariables = {
+	[key: string]:
+		| string
+		| number
+		| boolean
+		| null
+		| undefined
+		| string[]
+		| RunpodGraphqlVariables
+		| RunpodGraphqlVariables[];
+};
+
+function extractErrorMessage(
+	body: ErrorBody | string | null | undefined,
+): string | undefined {
+	if (typeof body === 'string' && body) return body;
 	if (typeof body !== 'object' || body === null) return undefined;
-	const record = body as Record<string, unknown>;
-	if (typeof record.detail === 'string' && record.detail) return record.detail;
-	if (typeof record.title === 'string' && record.title) return record.title;
-	if (typeof record.message === 'string' && record.message)
-		return record.message;
-	const errors = record.errors;
-	if (Array.isArray(errors) && errors[0] && typeof errors[0] === 'object') {
-		const first = errors[0] as { message?: unknown };
-		if (typeof first.message === 'string' && first.message)
-			return first.message;
-	}
-	return undefined;
+	if (typeof body.detail === 'string' && body.detail) return body.detail;
+	if (typeof body.title === 'string' && body.title) return body.title;
+	if (typeof body.message === 'string' && body.message) return body.message;
+	const first = body.errors?.[0]?.message;
+	return typeof first === 'string' && first ? first : undefined;
 }
 
-function gqlValue(value: unknown): string {
-	if (value === null) return 'null';
-	if (typeof value === 'string') return JSON.stringify(value);
-	if (typeof value === 'number' || typeof value === 'boolean')
-		return String(value);
-	if (Array.isArray(value)) return `[${value.map(gqlValue).join(', ')}]`;
-	if (typeof value === 'object') {
-		const fields = Object.entries(value as Record<string, unknown>)
-			.filter(([, v]) => v !== undefined)
-			.map(([k, v]) => `${k}: ${gqlValue(v)}`)
-			.join(', ');
-		return `{ ${fields} }`;
-	}
-	return 'null';
-}
-
-export function gqlInput(
-	fields: Record<string, unknown>,
-	enumKeys: string[] = [],
-): string {
-	const enums = new Set(enumKeys);
-	const parts = Object.entries(fields)
-		.filter(([, value]) => value !== undefined)
-		.map(([key, value]) =>
-			enums.has(key) && typeof value === 'string'
-				? `${key}: ${value}`
-				: `${key}: ${gqlValue(value)}`,
+function wrapTransportError(error: ApiError | Error | object): never {
+	if (error instanceof ApiError) {
+		throw new RunpodAPIError(
+			extractErrorMessage(error.body) || error.message,
+			undefined,
+			error.status,
+			error.retryAfter,
 		);
-	return `{ ${parts.join(', ')} }`;
+	}
+	if (error instanceof Error) {
+		throw new RunpodAPIError(error.message);
+	}
+	throw new RunpodAPIError('Unknown RunPod API error');
 }
 
 export async function makeRunpodRequest<T>(
@@ -92,7 +91,7 @@ export async function makeRunpodRequest<T>(
 	apiKey: string,
 	options: {
 		method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
-		body?: Record<string, unknown>;
+		body?: RunpodGraphqlVariables;
 		query?: Record<string, string | number | boolean | undefined>;
 	} = {},
 ): Promise<T> {
@@ -124,16 +123,8 @@ export async function makeRunpodRequest<T>(
 			rateLimitConfig: NO_TRANSPORT_RETRIES,
 		});
 	} catch (error) {
-		if (error instanceof ApiError) {
-			throw new RunpodAPIError(
-				extractErrorMessage(error.body) || error.message,
-				undefined,
-				error.status,
-				error.retryAfter,
-			);
-		}
-		if (error instanceof Error) {
-			throw new RunpodAPIError(error.message);
+		if (error instanceof ApiError || error instanceof Error) {
+			wrapTransportError(error);
 		}
 		throw new RunpodAPIError('Unknown RunPod API error');
 	}
@@ -142,7 +133,7 @@ export async function makeRunpodRequest<T>(
 export async function makeRunpodGraphql<T>(
 	apiKey: string,
 	query: string,
-	variables?: Record<string, unknown>,
+	variables?: RunpodGraphqlVariables,
 ): Promise<T> {
 	const config: OpenAPIConfig = {
 		BASE: RUNPOD_API,
@@ -170,18 +161,10 @@ export async function makeRunpodGraphql<T>(
 			rateLimitConfig: NO_TRANSPORT_RETRIES,
 		});
 	} catch (error) {
-		if (error instanceof ApiError) {
-			throw new RunpodAPIError(
-				extractErrorMessage(error.body) || error.message,
-				undefined,
-				error.status,
-				error.retryAfter,
-			);
+		if (error instanceof ApiError || error instanceof Error) {
+			wrapTransportError(error);
 		}
-		if (error instanceof Error) {
-			throw new RunpodAPIError(error.message);
-		}
-		throw new RunpodAPIError('Unknown RunPod GraphQL error');
+		throw new RunpodAPIError('Unknown RunPod API error');
 	}
 
 	const graphqlError = payload.errors?.[0]?.message;

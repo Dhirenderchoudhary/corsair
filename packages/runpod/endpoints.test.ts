@@ -9,6 +9,7 @@ import {
 	getMyself,
 	getPod,
 	listCpuTypes,
+	listPods,
 	saveEndpoint,
 	saveRegistryAuth,
 	saveTemplate,
@@ -31,7 +32,7 @@ const mockRequest = request as jest.MockedFunction<typeof request>;
 const mockLogEvent = logEventFromContext as jest.MockedFunction<
 	typeof logEventFromContext
 >;
-const ctx = { key: 'test-key' } as unknown as RunpodContext;
+const ctx = { key: 'test-key' } as RunpodContext;
 
 beforeEach(() => {
 	mockRequest.mockReset();
@@ -98,6 +99,25 @@ describe('catalog.cpuTypes', () => {
 		expect(mockRequest).toHaveBeenCalledWith(
 			expect.objectContaining({ BASE: 'https://api.runpod.io' }),
 			expect.objectContaining({ method: 'GET', url: '/v2/catalog/cpus' }),
+			expect.anything(),
+		);
+	});
+});
+
+describe('pods.list', () => {
+	it('lists pods from REST v1', async () => {
+		mockRequest.mockResolvedValueOnce([
+			{ id: 'pod_1', desiredStatus: 'RUNNING' },
+		]);
+		const result = await listPods(ctx, { desiredStatus: 'RUNNING' });
+		expect(result[0]?.id).toBe('pod_1');
+		expect(mockRequest).toHaveBeenCalledWith(
+			expect.objectContaining({ BASE: 'https://rest.runpod.io/v1' }),
+			expect.objectContaining({
+				method: 'GET',
+				url: '/pods',
+				query: { desiredStatus: 'RUNNING' },
+			}),
 			expect.anything(),
 		);
 	});

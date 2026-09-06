@@ -22,6 +22,7 @@ import {
 	getMyself,
 	getPod,
 	listCpuTypes,
+	listPods,
 	saveEndpoint,
 	saveRegistryAuth,
 	saveTemplate,
@@ -67,6 +68,7 @@ export type RunpodEndpoints = {
 	updateUserSettings: RunpodEndpoint<'updateUserSettings'>;
 	getGpuTypes: RunpodEndpoint<'getGpuTypes'>;
 	listCpuTypes: RunpodEndpoint<'listCpuTypes'>;
+	listPods: RunpodEndpoint<'listPods'>;
 	getPod: RunpodEndpoint<'getPod'>;
 	createCluster: RunpodEndpoint<'createCluster'>;
 	createSecret: RunpodEndpoint<'createSecret'>;
@@ -88,6 +90,7 @@ const runpodEndpointsNested = {
 		cpuTypes: listCpuTypes,
 	},
 	pods: {
+		list: listPods,
 		get: getPod,
 	},
 	clusters: {
@@ -128,6 +131,10 @@ export const runpodEndpointSchemas = {
 	'catalog.cpuTypes': {
 		input: RunpodEndpointInputSchemas.listCpuTypes,
 		output: RunpodEndpointOutputSchemas.listCpuTypes,
+	},
+	'pods.list': {
+		input: RunpodEndpointInputSchemas.listPods,
+		output: RunpodEndpointOutputSchemas.listPods,
 	},
 	'pods.get': {
 		input: RunpodEndpointInputSchemas.getPod,
@@ -189,6 +196,11 @@ const runpodEndpointMeta = {
 	'catalog.cpuTypes': {
 		riskLevel: 'read',
 		description: 'List CPU types with vCPU range, RAM, and pricing',
+	},
+	'pods.list': {
+		riskLevel: 'read',
+		description:
+			'List Pods with optional status, GPU, image, and location filters',
 	},
 	'pods.get': {
 		riskLevel: 'read',
@@ -297,6 +309,7 @@ export type {
 	GetGpuTypesInput,
 	GetPodInput,
 	ListCpuTypesInput,
+	ListPodsInput,
 	RunpodEndpointInputs,
 	RunpodEndpointOutputs,
 	SaveEndpointInput,

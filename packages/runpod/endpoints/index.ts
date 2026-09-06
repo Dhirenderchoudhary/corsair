@@ -7,6 +7,7 @@ export {
 	getMyself,
 	getPod,
 	listCpuTypes,
+	listPods,
 	saveEndpoint,
 	saveRegistryAuth,
 	saveTemplate,

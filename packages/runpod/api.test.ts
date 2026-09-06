@@ -8,6 +8,7 @@ import {
 	getMyself,
 	getPod,
 	listCpuTypes,
+	listPods,
 	saveRegistryAuth,
 	saveTemplate,
 	updateRegistryAuth,
@@ -16,7 +17,7 @@ import { RunpodEndpointOutputSchemas } from './endpoints/types';
 import type { RunpodContext } from './index';
 
 const TEST_API_KEY = process.env.RUNPOD_API_KEY;
-const ctx = { key: TEST_API_KEY } as unknown as RunpodContext;
+const ctx = { key: TEST_API_KEY } as RunpodContext;
 const maybeDescribe = TEST_API_KEY ? describe : describe.skip;
 
 maybeDescribe('RunPod live API', () => {
@@ -37,6 +38,12 @@ maybeDescribe('RunPod live API', () => {
 		const cpus = await listCpuTypes(ctx, {});
 		expect(cpus.cpus.length).toBeGreaterThan(0);
 		RunpodEndpointOutputSchemas.listCpuTypes.parse(cpus);
+	});
+
+	it('lists pods', async () => {
+		const pods = await listPods(ctx, {});
+		expect(Array.isArray(pods)).toBe(true);
+		RunpodEndpointOutputSchemas.listPods.parse(pods);
 	});
 
 	it('returns a structured error for a missing pod', async () => {

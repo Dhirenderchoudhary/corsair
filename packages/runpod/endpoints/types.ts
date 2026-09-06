@@ -88,6 +88,26 @@ export const ListCpuTypesOutputSchema = z.object({
 	cpus: z.array(CpuTypeSchema),
 });
 
+/** @see https://docs.runpod.io/api-reference/pods/GET/pods */
+export const ListPodsInputSchema = z.object({
+	computeType: z.enum(['GPU', 'CPU']).optional(),
+	cpuFlavorId: z.union([z.string(), z.array(z.string())]).optional(),
+	dataCenterId: z.union([z.string(), z.array(z.string())]).optional(),
+	desiredStatus: z.enum(['RUNNING', 'EXITED', 'TERMINATED']).optional(),
+	endpointId: z.string().optional(),
+	gpuTypeId: z.union([z.string(), z.array(z.string())]).optional(),
+	id: z.string().optional(),
+	imageName: z.string().optional(),
+	includeMachine: z.boolean().optional(),
+	includeNetworkVolume: z.boolean().optional(),
+	includeSavingsPlans: z.boolean().optional(),
+	includeTemplate: z.boolean().optional(),
+	includeWorkers: z.boolean().optional(),
+	name: z.string().optional(),
+	networkVolumeId: z.string().optional(),
+	templateId: z.string().optional(),
+});
+
 /** @see https://docs.runpod.io/api-reference/pods/GET/pods/podId */
 export const GetPodInputSchema = z.object({
 	podId: z.string().min(1),
@@ -117,6 +137,8 @@ export const PodSchema = z
 			.optional(),
 	})
 	.loose();
+
+export const ListPodsOutputSchema = z.array(PodSchema);
 
 /** @see https://docs.runpod.io/api-reference-v2/clusters/create-a-cluster */
 export const CreateClusterInputSchema = z.object({
@@ -247,7 +269,7 @@ export const SaveEndpointInputSchema = z.object({
 	type: z.enum(['QB', 'LB']).optional(),
 	idleTimeout: z.number().int().optional(),
 	locations: z.string().optional(),
-	flashBootType: z.string().optional(),
+	flashBootType: z.enum(['FLASHBOOT']).optional(),
 	scalerType: z.enum(['QUEUE_DELAY', 'REQUEST_COUNT']).optional(),
 	scalerValue: z.number().optional(),
 	workersMin: z.number().int().optional(),
@@ -283,6 +305,8 @@ export type GetGpuTypesInput = z.input<typeof GetGpuTypesInputSchema>;
 export type GetGpuTypesOutput = z.infer<typeof GetGpuTypesOutputSchema>;
 export type ListCpuTypesInput = z.input<typeof ListCpuTypesInputSchema>;
 export type ListCpuTypesOutput = z.infer<typeof ListCpuTypesOutputSchema>;
+export type ListPodsInput = z.input<typeof ListPodsInputSchema>;
+export type ListPodsOutput = z.infer<typeof ListPodsOutputSchema>;
 export type GetPodInput = z.input<typeof GetPodInputSchema>;
 export type GetPodOutput = z.infer<typeof PodSchema>;
 export type CreateClusterInput = z.input<typeof CreateClusterInputSchema>;
@@ -313,6 +337,7 @@ export type RunpodEndpointInputs = {
 	updateUserSettings: UpdateUserSettingsInput;
 	getGpuTypes: GetGpuTypesInput;
 	listCpuTypes: ListCpuTypesInput;
+	listPods: ListPodsInput;
 	getPod: GetPodInput;
 	createCluster: CreateClusterInput;
 	createSecret: CreateSecretInput;
@@ -329,6 +354,7 @@ export type RunpodEndpointOutputs = {
 	updateUserSettings: UpdateUserSettingsOutput;
 	getGpuTypes: GetGpuTypesOutput;
 	listCpuTypes: ListCpuTypesOutput;
+	listPods: ListPodsOutput;
 	getPod: GetPodOutput;
 	createCluster: CreateClusterOutput;
 	createSecret: CreateSecretOutput;
@@ -345,6 +371,7 @@ export const RunpodEndpointInputSchemas = {
 	updateUserSettings: UpdateUserSettingsInputSchema,
 	getGpuTypes: GetGpuTypesInputSchema,
 	listCpuTypes: ListCpuTypesInputSchema,
+	listPods: ListPodsInputSchema,
 	getPod: GetPodInputSchema,
 	createCluster: CreateClusterInputSchema,
 	createSecret: CreateSecretInputSchema,
@@ -361,6 +388,7 @@ export const RunpodEndpointOutputSchemas = {
 	updateUserSettings: UpdateUserSettingsOutputSchema,
 	getGpuTypes: GetGpuTypesOutputSchema,
 	listCpuTypes: ListCpuTypesOutputSchema,
+	listPods: ListPodsOutputSchema,
 	getPod: PodSchema,
 	createCluster: ClusterSchema,
 	createSecret: SecretSchema,
