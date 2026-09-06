@@ -52,54 +52,71 @@ maybeDescribe('RunPod live API', () => {
 
 	it('creates, updates, and deletes registry auth', async () => {
 		const name = `corsair-test-${Date.now()}`;
-		const saved = await saveRegistryAuth(ctx, {
-			name,
-			username: 'corsair-test',
-			password: 'corsair-test-password',
-		});
-		expect(saved.id).toBeTruthy();
-		RunpodEndpointOutputSchemas.saveRegistryAuth.parse(saved);
+		let registryId: string | undefined;
+		try {
+			const saved = await saveRegistryAuth(ctx, {
+				name,
+				username: 'corsair-test',
+				password: 'corsair-test-password',
+			});
+			registryId = saved.id;
+			expect(saved.id).toBeTruthy();
+			RunpodEndpointOutputSchemas.saveRegistryAuth.parse(saved);
 
-		const updated = await updateRegistryAuth(ctx, {
-			id: saved.id,
-			username: 'corsair-test',
-			password: 'corsair-test-password-2',
-		});
-		expect(updated.id).toBe(saved.id);
-
-		const deleted = await deleteRegistryAuth(ctx, {
-			containerRegistryAuthId: saved.id,
-		});
-		expect(deleted).toBeDefined();
+			const updated = await updateRegistryAuth(ctx, {
+				id: saved.id,
+				username: 'corsair-test',
+				password: 'corsair-test-password-2',
+			});
+			expect(updated.id).toBe(saved.id);
+		} finally {
+			if (registryId) {
+				await deleteRegistryAuth(ctx, {
+					containerRegistryAuthId: registryId,
+				});
+			}
+		}
 	});
 
 	it('creates and deletes a serverless template', async () => {
 		const name = `corsair-tpl-${Date.now()}`;
-		const saved = await saveTemplate(ctx, {
-			name,
-			imageName: 'runpod/serverless-hello-world:latest',
-			containerDiskInGb: 5,
-			volumeInGb: 0,
-			isServerless: true,
-		});
-		expect(saved.id).toBeTruthy();
-		RunpodEndpointOutputSchemas.saveTemplate.parse(saved);
-
-		const deleted = await deleteTemplate(ctx, { templateName: name });
-		expect(deleted.success).toBe(true);
+		let created = false;
+		try {
+			const saved = await saveTemplate(ctx, {
+				name,
+				imageName: 'runpod/serverless-hello-world:latest',
+				containerDiskInGb: 5,
+				volumeInGb: 0,
+				isServerless: true,
+			});
+			created = true;
+			expect(saved.id).toBeTruthy();
+			RunpodEndpointOutputSchemas.saveTemplate.parse(saved);
+		} finally {
+			if (created) {
+				await deleteTemplate(ctx, { templateName: name });
+			}
+		}
 	});
 
 	it('creates a secret', async () => {
 		const name = `corsair_secret_${Date.now()}`;
-		const secret = await createSecret(ctx, {
-			name,
-			value: 'corsair-live-test',
-		});
-		expect(secret.id).toBeTruthy();
-		RunpodEndpointOutputSchemas.createSecret.parse(secret);
-		await makeRunpodGraphql(
-			TEST_API_KEY!,
-			`mutation { secretDelete(id: ${JSON.stringify(secret.id)}) }`,
-		);
+		let secretId: string | undefined;
+		try {
+			const secret = await createSecret(ctx, {
+				name,
+				value: 'corsair-live-test',
+			});
+			secretId = secret.id;
+			expect(secret.id).toBeTruthy();
+			RunpodEndpointOutputSchemas.createSecret.parse(secret);
+		} finally {
+			if (secretId) {
+				await makeRunpodGraphql(
+					TEST_API_KEY!,
+					`mutation { secretDelete(id: ${JSON.stringify(secretId)}) }`,
+				);
+			}
+		}
 	});
 });

@@ -124,7 +124,7 @@ export const PodSchema = z
 		name: z.string().optional(),
 		image: z.string().optional(),
 		desiredStatus: z.enum(['RUNNING', 'EXITED', 'TERMINATED']).optional(),
-		costPerHr: z.number().optional(),
+		costPerHr: z.coerce.number().optional(),
 		memoryInGb: z.number().optional(),
 		vcpuCount: z.number().optional(),
 		gpu: z

@@ -32,4 +32,10 @@ describe('Runpod schema', () => {
 		expect(RunpodSchema.entities.registryAuths).toBe(RunpodRegistryAuth);
 		expect(RunpodSchema.entities.secrets).toBe(RunpodSecret);
 	});
+
+	it('coerces string costPerHr from the REST API', () => {
+		expect(RunpodPod.parse({ id: 'pod_1', costPerHr: '0.74' }).costPerHr).toBe(
+			0.74,
+		);
+	});
 });

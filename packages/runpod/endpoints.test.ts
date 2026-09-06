@@ -128,10 +128,12 @@ describe('pods.get', () => {
 		mockRequest.mockResolvedValueOnce({
 			id: 'pod_1',
 			desiredStatus: 'RUNNING',
+			costPerHr: '0.74',
 			memoryInGb: 62,
 		});
 		const result = await getPod(ctx, { podId: 'pod_1' });
 		expect(result.id).toBe('pod_1');
+		expect(result.costPerHr).toBe(0.74);
 		expect(mockRequest).toHaveBeenCalledWith(
 			expect.objectContaining({ BASE: 'https://rest.runpod.io/v1' }),
 			expect.objectContaining({ method: 'GET', url: '/pods/pod_1' }),
@@ -199,11 +201,11 @@ describe('registries', () => {
 	});
 
 	it('deletes registry auth via REST v1', async () => {
-		mockRequest.mockResolvedValueOnce({ id: 'reg_1', name: 'docker' });
+		mockRequest.mockResolvedValueOnce(undefined);
 		const result = await deleteRegistryAuth(ctx, {
 			containerRegistryAuthId: 'reg_1',
 		});
-		expect(result.id).toBe('reg_1');
+		expect(result).toEqual({});
 	});
 });
 
