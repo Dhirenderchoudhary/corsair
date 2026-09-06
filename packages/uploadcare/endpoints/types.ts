@@ -15,11 +15,9 @@ export const UploadcareFileSchema = z
 		size: z.number().optional(),
 		url: z.string().optional(),
 		variations: z.record(z.string(), z.string()).nullable().optional(),
-		// Official image vs video content_info shapes differ by mime type.
-		content_info: z.record(z.string(), z.unknown()).optional(),
+		content_info: z.record(z.string(), z.json()).optional(),
 		metadata: z.record(z.string(), z.string()).optional(),
-		// Official appdata keys depend on which add-ons ran.
-		appdata: z.record(z.string(), z.unknown()).optional(),
+		appdata: z.record(z.string(), z.json()).optional(),
 		tags: z.array(z.string()).optional(),
 	})
 	.loose();
@@ -32,8 +30,7 @@ export const UploadcareGroupSchema = z
 		files_count: z.number().optional(),
 		cdn_url: z.string().optional(),
 		url: z.string().optional(),
-		// Official group.files is file objects or null for removed members.
-		files: z.array(z.unknown()).nullable().optional(),
+		files: z.array(z.json()).nullable().optional(),
 	})
 	.loose();
 export type UploadcareGroup = z.infer<typeof UploadcareGroupSchema>;
@@ -311,8 +308,7 @@ export type MultipartStartResponse = z.infer<
 
 export const AddonExecuteInputSchema = z.object({
 	target: z.string(),
-	// Official add-on params differ per add-on name; no shared schema.
-	params: z.record(z.string(), z.unknown()).optional(),
+	params: z.record(z.string(), z.json()).optional(),
 });
 export type AddonExecuteInput = z.infer<typeof AddonExecuteInputSchema>;
 

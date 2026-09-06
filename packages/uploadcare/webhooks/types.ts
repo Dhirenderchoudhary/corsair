@@ -9,9 +9,8 @@ import { z } from 'zod';
 export const UploadcareWebhookPayloadSchema = z
 	.object({
 		event: z.string().optional(),
-		hook: z.record(z.string(), z.unknown()).optional(),
-		// Official extra keys (appdata, content_info) vary by file type.
-		data: z.record(z.string(), z.unknown()),
+		hook: z.record(z.string(), z.json()).optional(),
+		data: z.record(z.string(), z.json()),
 	})
 	.loose();
 
@@ -86,7 +85,7 @@ export function createUploadcareMatch(
 }
 
 export function verifyUploadcareWebhookSignature(
-	request: WebhookRequest<UploadcareWebhookPayload>,
+	request: WebhookRequest<FileUploadedEvent>,
 	secret: string,
 ): { valid: boolean; error?: string } {
 	if (!secret) {

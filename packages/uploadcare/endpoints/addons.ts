@@ -1,12 +1,16 @@
 import { logEventFromContext } from 'corsair/core';
 import type { UploadcareEndpoints } from '..';
 import { makeUploadcareRequest } from '../client';
-import type { AddonExecuteResponse, AddonStatusResponse } from './types';
+import type {
+	AddonExecuteInput,
+	AddonExecuteResponse,
+	AddonStatusResponse,
+} from './types';
 
 async function executeAddon(
 	ctx: Parameters<UploadcareEndpoints['executeClamavScan']>[0],
 	addon: string,
-	input: { target: string; params?: Record<string, unknown> },
+	input: AddonExecuteInput,
 	event: string,
 ): Promise<AddonExecuteResponse> {
 	const response = await makeUploadcareRequest<AddonExecuteResponse>(
