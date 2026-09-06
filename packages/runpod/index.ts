@@ -1,7 +1,6 @@
 import type {
 	AuthTypes,
 	BindEndpoints,
-	BindWebhooks,
 	CorsairEndpoint,
 	CorsairErrorHandler,
 	CorsairPlugin,
@@ -12,9 +11,23 @@ import type {
 	PluginPermissionsConfig,
 	RequiredPluginEndpointMeta,
 	RequiredPluginEndpointSchemas,
-	RequiredPluginWebhookSchemas,
 } from 'corsair/core';
-import { Pods } from './endpoints';
+import { AuthMissingError } from 'corsair/core';
+import {
+	createCluster,
+	createSecret,
+	deleteRegistryAuth,
+	deleteTemplate,
+	getGpuTypes,
+	getMyself,
+	getPod,
+	listCpuTypes,
+	saveEndpoint,
+	saveRegistryAuth,
+	saveTemplate,
+	updateRegistryAuth,
+	updateUserSettings,
+} from './endpoints';
 import type {
 	RunpodEndpointInputs,
 	RunpodEndpointOutputs,
@@ -50,40 +63,169 @@ type RunpodEndpoint<K extends keyof RunpodEndpointOutputs> = CorsairEndpoint<
 >;
 
 export type RunpodEndpoints = {
-	listPods: RunpodEndpoint<'listPods'>;
+	getMyself: RunpodEndpoint<'getMyself'>;
+	updateUserSettings: RunpodEndpoint<'updateUserSettings'>;
+	getGpuTypes: RunpodEndpoint<'getGpuTypes'>;
+	listCpuTypes: RunpodEndpoint<'listCpuTypes'>;
+	getPod: RunpodEndpoint<'getPod'>;
+	createCluster: RunpodEndpoint<'createCluster'>;
+	createSecret: RunpodEndpoint<'createSecret'>;
+	saveRegistryAuth: RunpodEndpoint<'saveRegistryAuth'>;
+	updateRegistryAuth: RunpodEndpoint<'updateRegistryAuth'>;
+	deleteRegistryAuth: RunpodEndpoint<'deleteRegistryAuth'>;
+	saveTemplate: RunpodEndpoint<'saveTemplate'>;
+	deleteTemplate: RunpodEndpoint<'deleteTemplate'>;
+	saveEndpoint: RunpodEndpoint<'saveEndpoint'>;
 };
 
-export type RunpodWebhooks = {};
-
-export type RunpodBoundWebhooks = BindWebhooks<RunpodWebhooks>;
-
 const runpodEndpointsNested = {
+	account: {
+		myself: getMyself,
+		updateSettings: updateUserSettings,
+	},
+	catalog: {
+		gpuTypes: getGpuTypes,
+		cpuTypes: listCpuTypes,
+	},
 	pods: {
-		list: Pods.list,
+		get: getPod,
+	},
+	clusters: {
+		create: createCluster,
+	},
+	secrets: {
+		create: createSecret,
+	},
+	registries: {
+		save: saveRegistryAuth,
+		update: updateRegistryAuth,
+		delete: deleteRegistryAuth,
+	},
+	templates: {
+		save: saveTemplate,
+		delete: deleteTemplate,
+	},
+	endpoints: {
+		save: saveEndpoint,
 	},
 } as const;
 
 const runpodWebhooksNested = {} as const;
 
 export const runpodEndpointSchemas = {
-	'pods.list': {
-		input: RunpodEndpointInputSchemas.listPods,
-		output: RunpodEndpointOutputSchemas.listPods,
+	'account.myself': {
+		input: RunpodEndpointInputSchemas.getMyself,
+		output: RunpodEndpointOutputSchemas.getMyself,
+	},
+	'account.updateSettings': {
+		input: RunpodEndpointInputSchemas.updateUserSettings,
+		output: RunpodEndpointOutputSchemas.updateUserSettings,
+	},
+	'catalog.gpuTypes': {
+		input: RunpodEndpointInputSchemas.getGpuTypes,
+		output: RunpodEndpointOutputSchemas.getGpuTypes,
+	},
+	'catalog.cpuTypes': {
+		input: RunpodEndpointInputSchemas.listCpuTypes,
+		output: RunpodEndpointOutputSchemas.listCpuTypes,
+	},
+	'pods.get': {
+		input: RunpodEndpointInputSchemas.getPod,
+		output: RunpodEndpointOutputSchemas.getPod,
+	},
+	'clusters.create': {
+		input: RunpodEndpointInputSchemas.createCluster,
+		output: RunpodEndpointOutputSchemas.createCluster,
+	},
+	'secrets.create': {
+		input: RunpodEndpointInputSchemas.createSecret,
+		output: RunpodEndpointOutputSchemas.createSecret,
+	},
+	'registries.save': {
+		input: RunpodEndpointInputSchemas.saveRegistryAuth,
+		output: RunpodEndpointOutputSchemas.saveRegistryAuth,
+	},
+	'registries.update': {
+		input: RunpodEndpointInputSchemas.updateRegistryAuth,
+		output: RunpodEndpointOutputSchemas.updateRegistryAuth,
+	},
+	'registries.delete': {
+		input: RunpodEndpointInputSchemas.deleteRegistryAuth,
+		output: RunpodEndpointOutputSchemas.deleteRegistryAuth,
+	},
+	'templates.save': {
+		input: RunpodEndpointInputSchemas.saveTemplate,
+		output: RunpodEndpointOutputSchemas.saveTemplate,
+	},
+	'templates.delete': {
+		input: RunpodEndpointInputSchemas.deleteTemplate,
+		output: RunpodEndpointOutputSchemas.deleteTemplate,
+	},
+	'endpoints.save': {
+		input: RunpodEndpointInputSchemas.saveEndpoint,
+		output: RunpodEndpointOutputSchemas.saveEndpoint,
 	},
 } as const satisfies RequiredPluginEndpointSchemas<
 	typeof runpodEndpointsNested
 >;
 
-const runpodWebhookSchemas = {} as const satisfies RequiredPluginWebhookSchemas<
-	typeof runpodWebhooksNested
->;
-
-const defaultAuthType: AuthTypes = 'api_key';
+const defaultAuthType: AuthTypes = 'api_key' as const;
 
 const runpodEndpointMeta = {
-	'pods.list': {
+	'account.myself': {
 		riskLevel: 'read',
-		description: 'List RunPod pods',
+		description:
+			'Get the authenticated RunPod user id, email, MFA, and SSH public key',
+	},
+	'account.updateSettings': {
+		riskLevel: 'write',
+		description: 'Update the account SSH public key used for Pod access',
+	},
+	'catalog.gpuTypes': {
+		riskLevel: 'read',
+		description:
+			'List GPU types with memory, cloud availability, pricing, and stock',
+	},
+	'catalog.cpuTypes': {
+		riskLevel: 'read',
+		description: 'List CPU types with vCPU range, RAM, and pricing',
+	},
+	'pods.get': {
+		riskLevel: 'read',
+		description: 'Get a Pod by id including status, cost, GPU, and memory',
+	},
+	'clusters.create': {
+		riskLevel: 'write',
+		description: 'Create a multi-node GPU cluster for distributed workloads',
+	},
+	'secrets.create': {
+		riskLevel: 'write',
+		description:
+			'Create an encrypted secret referenced as RUNPOD_SECRET_<name>',
+	},
+	'registries.save': {
+		riskLevel: 'write',
+		description: 'Store credentials for a private container registry',
+	},
+	'registries.update': {
+		riskLevel: 'write',
+		description: 'Update username or password for a saved registry auth',
+	},
+	'registries.delete': {
+		riskLevel: 'write',
+		description: 'Delete stored container registry credentials',
+	},
+	'templates.save': {
+		riskLevel: 'write',
+		description: 'Create or update a reusable Pod or Serverless template',
+	},
+	'templates.delete': {
+		riskLevel: 'write',
+		description: 'Delete a template that is not in use by pods or endpoints',
+	},
+	'endpoints.save': {
+		riskLevel: 'write',
+		description: 'Create or update a Serverless endpoint and scaling settings',
 	},
 } as const satisfies RequiredPluginEndpointMeta<typeof runpodEndpointsNested>;
 
@@ -125,7 +267,6 @@ export function runpod<const T extends RunpodPluginOptions>(
 		webhooks: runpodWebhooksNested,
 		endpointMeta: runpodEndpointMeta,
 		endpointSchemas: runpodEndpointSchemas,
-		webhookSchemas: runpodWebhookSchemas,
 		errorHandlers: {
 			...errorHandlers,
 			...options.errorHandlers,
@@ -136,18 +277,31 @@ export function runpod<const T extends RunpodPluginOptions>(
 			}
 
 			if (source === 'endpoint' && ctx.authType === 'api_key') {
-				const res = await ctx.keys.get_api_key();
-				return res ?? '';
+				const key = await ctx.keys.get_api_key();
+				if (!key) {
+					throw new AuthMissingError('runpod', 'api_key');
+				}
+				return key;
 			}
 
-			return '';
+			throw new AuthMissingError('runpod', 'api_key');
 		},
 	} satisfies InternalRunpodPlugin;
 }
 
 export type {
-	ListPodsInput,
-	ListPodsResponse,
+	CreateClusterInput,
+	CreateSecretInput,
+	DeleteRegistryAuthInput,
+	DeleteTemplateInput,
+	GetGpuTypesInput,
+	GetPodInput,
+	ListCpuTypesInput,
 	RunpodEndpointInputs,
 	RunpodEndpointOutputs,
+	SaveEndpointInput,
+	SaveRegistryAuthInput,
+	SaveTemplateInput,
+	UpdateRegistryAuthInput,
+	UpdateUserSettingsInput,
 } from './endpoints/types';

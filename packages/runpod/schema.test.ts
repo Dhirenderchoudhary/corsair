@@ -1,20 +1,35 @@
 import { RunpodSchema } from './schema';
+import {
+	RunpodCluster,
+	RunpodEndpoint,
+	RunpodPod,
+	RunpodRegistryAuth,
+	RunpodSecret,
+	RunpodTemplate,
+	RunpodUser,
+} from './schema/database';
 
 describe('Runpod schema', () => {
 	it('declares a semver version', () => {
-		expect(RunpodSchema.version).toBeDefined();
 		expect(RunpodSchema.version).toMatch(/^\d+\.\d+\.\d+$/);
 	});
 
-	it('declares an entities map', () => {
-		expect(typeof RunpodSchema.entities).toBe('object');
-		expect(RunpodSchema.entities).not.toBeNull();
-		expect(Array.isArray(Object.keys(RunpodSchema.entities))).toBe(true);
-		for (const entity of Object.values(RunpodSchema.entities)) {
-			expect(entity).toBeDefined();
-		}
+	it('declares labeled entities from official docs', () => {
+		expect(Object.keys(RunpodSchema.entities)).toEqual([
+			'users',
+			'pods',
+			'clusters',
+			'templates',
+			'endpoints',
+			'registryAuths',
+			'secrets',
+		]);
+		expect(RunpodSchema.entities.users).toBe(RunpodUser);
+		expect(RunpodSchema.entities.pods).toBe(RunpodPod);
+		expect(RunpodSchema.entities.clusters).toBe(RunpodCluster);
+		expect(RunpodSchema.entities.templates).toBe(RunpodTemplate);
+		expect(RunpodSchema.entities.endpoints).toBe(RunpodEndpoint);
+		expect(RunpodSchema.entities.registryAuths).toBe(RunpodRegistryAuth);
+		expect(RunpodSchema.entities.secrets).toBe(RunpodSecret);
 	});
 });
-
-// Per .github/PLUGIN_PR_RULES.md (R2), every implemented endpoint
-// needs a corresponding test.

@@ -483,7 +483,7 @@ export const ProviderDisplayNames = {
 	removebg: 'remove.bg',
 	resend: 'Resend',
 	retailed: 'Retailed',
-	runpod: 'Runpod',
+	runpod: 'RunPod',
 	salesforce: 'Salesforce',
 	sapsuccessfactors: 'SAP SuccessFactors',
 	scaleai: 'Scale AI',
