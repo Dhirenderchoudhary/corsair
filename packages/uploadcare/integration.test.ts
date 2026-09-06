@@ -6,11 +6,17 @@ import {
 import { UploadcareEndpointOutputSchemas } from './endpoints/types';
 
 const API_KEY = process.env.UPLOADCARE_API_KEY;
+const secret = API_KEY?.split(':')[1]?.trim() ?? '';
+const hasPublic = Boolean(API_KEY);
+const hasSecret = Boolean(
+	secret && !/^(your_secret|xxx|changeme|secret)$/i.test(secret),
+);
 
-const maybe = API_KEY ? it : it.skip;
+const rest = hasSecret ? it : it.skip;
+const upload = hasPublic ? it : it.skip;
 
 describe('Uploadcare live API', () => {
-	maybe('project.get matches official schema', async () => {
+	rest('project.get matches official schema', async () => {
 		const result = await makeUploadcareRequest<unknown>('/project/', API_KEY!, {
 			method: 'GET',
 		});
@@ -18,7 +24,7 @@ describe('Uploadcare live API', () => {
 		expect(parsed.pub_key || parsed.name).toBeTruthy();
 	});
 
-	maybe('files.list matches official schema', async () => {
+	rest('files.list matches official schema', async () => {
 		const result = await makeUploadcareRequest<unknown>('/files/', API_KEY!, {
 			method: 'GET',
 			query: { limit: 5 },
@@ -26,7 +32,7 @@ describe('Uploadcare live API', () => {
 		UploadcareEndpointOutputSchemas.filesList.parse(result);
 	});
 
-	maybe('upload.from_url accepts the public key', async () => {
+	upload('upload.from_url accepts the public key', async () => {
 		const result = await makeUploadcareUploadRequest<unknown>('/from_url/', {
 			method: 'POST',
 			formData: {
