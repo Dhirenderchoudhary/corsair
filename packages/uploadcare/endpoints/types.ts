@@ -311,6 +311,7 @@ export type MultipartStartResponse = z.infer<
 
 export const AddonExecuteInputSchema = z.object({
 	target: z.string(),
+	// Official add-on params differ per add-on name; no shared schema.
 	params: z.record(z.string(), z.unknown()).optional(),
 });
 export type AddonExecuteInput = z.infer<typeof AddonExecuteInputSchema>;

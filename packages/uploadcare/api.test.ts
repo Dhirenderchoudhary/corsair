@@ -374,7 +374,7 @@ describe('Webhook Signature Verification', () => {
 					data: { uuid: FILE.uuid },
 				},
 			} as never),
-		).toEqual({ linkType: 'project_id', externalId: '13' });
+		).toEqual({ linkType: 'tenant_external_id', externalId: '13' });
 	});
 
 	it('rejects invalid signature and missing secret', () => {

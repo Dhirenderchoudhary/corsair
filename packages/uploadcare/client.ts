@@ -6,6 +6,7 @@ export class UploadcareAPIError extends Error {
 		message: string,
 		public readonly code?: string,
 		public readonly status?: number,
+		// Provider error JSON is not a single documented object.
 		public readonly body?: unknown,
 		public readonly retryAfter?: number,
 	) {
@@ -46,6 +47,7 @@ function errorCode(body: unknown): string | undefined {
 	return undefined;
 }
 
+// fetch/request can throw ApiError, Error, or a non-Error value.
 function wrapRequestError(error: unknown): never {
 	if (error instanceof ApiError) {
 		throw new UploadcareAPIError(
@@ -67,6 +69,7 @@ export async function makeUploadcareRequest<T>(
 	apiKey: string,
 	options: {
 		method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+		// REST bodies are arrays (batch UUIDs) or objects depending on the op.
 		body?: unknown;
 		query?: Record<string, string | number | boolean | undefined>;
 		mediaType?: string;

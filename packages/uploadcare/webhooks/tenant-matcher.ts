@@ -19,5 +19,5 @@ export function matchUploadcareTenantWebhook(
 
 	if (!externalId) return null;
 
-	return { linkType: 'project_id', externalId };
+	return { linkType: 'tenant_external_id', externalId };
 }
