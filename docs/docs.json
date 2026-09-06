@@ -2133,15 +2133,6 @@
                 ]
               },
               {
-                "group": "Uploadcare",
-                "pages": [
-                  "plugins/uploadcare/overview",
-                  "plugins/uploadcare/api",
-                  "plugins/uploadcare/database",
-                  "plugins/uploadcare/webhooks"
-                ]
-              },
-              {
                 "group": "Vapi",
                 "pages": [
                   "plugins/vapi/overview",

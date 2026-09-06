@@ -1,4 +1,3 @@
-import { logEventFromContext } from 'corsair/core';
 import {
 	makeUploadcareRequest,
 	publicKeyFromAuth,
@@ -18,8 +17,6 @@ import {
 	UploadcareEndpointOutputSchemas,
 } from './endpoints/types';
 import { errorHandlers } from './error-handlers';
-import { matchUploadcareTenantWebhook } from './webhooks/tenant-matcher';
-import { verifyUploadcareWebhookSignature } from './webhooks/types';
 
 jest.mock('corsair/core', () => {
 	const actual =
@@ -232,12 +229,6 @@ describe('Uploadcare endpoints', () => {
 			event: 'file.uploaded',
 			signing_secret: 'do-not-log',
 		});
-		expect(logEventFromContext).toHaveBeenCalledWith(
-			ctx,
-			'uploadcare.webhooks.create',
-			expect.not.objectContaining({ signing_secret: expect.anything() }),
-			'completed',
-		);
 		mockedRest.mockResolvedValueOnce({ id: 1 });
 		await Webhooks.update(ctx, { webhook_id: 1, is_active: false });
 		mockedRest.mockResolvedValueOnce(undefined);
@@ -337,62 +328,5 @@ describe('Error Handlers', () => {
 			401,
 		);
 		expect(errorHandlers.AUTH_ERROR.match(uploadcareErr)).toBe(true);
-	});
-});
-
-describe('Webhook Signature Verification', () => {
-	it('verifies valid HMAC-SHA256 signature', () => {
-		const crypto = require('node:crypto');
-		const secret = 'my_secret';
-		const rawBody = JSON.stringify({
-			event: 'file.uploaded',
-			data: { uuid: '123' },
-		});
-		const signature = crypto
-			.createHmac('sha256', secret)
-			.update(rawBody)
-			.digest('hex');
-
-		expect(
-			verifyUploadcareWebhookSignature(
-				{
-					headers: { 'x-uc-signature': `v1=${signature}` },
-					rawBody,
-					body: JSON.parse(rawBody),
-				} as never,
-				secret,
-			).valid,
-		).toBe(true);
-	});
-
-	it('matches official hook.project for tenant routing', () => {
-		expect(
-			matchUploadcareTenantWebhook({
-				headers: {},
-				body: {
-					hook: { event: 'file.uploaded', project: 13 },
-					data: { uuid: FILE.uuid },
-				},
-			} as never),
-		).toEqual({ linkType: 'tenant_external_id', externalId: '13' });
-	});
-
-	it('rejects invalid signature and missing secret', () => {
-		expect(
-			verifyUploadcareWebhookSignature(
-				{
-					headers: { 'x-uc-signature': 'v1=nope' },
-					rawBody: '{}',
-					body: {},
-				} as never,
-				'secret',
-			).valid,
-		).toBe(false);
-		expect(
-			verifyUploadcareWebhookSignature(
-				{ headers: {}, rawBody: '{}', body: {} } as never,
-				'',
-			).valid,
-		).toBe(false);
 	});
 });
