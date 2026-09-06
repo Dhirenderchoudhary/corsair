@@ -63,7 +63,9 @@ function errorCode(body: ProviderJson | undefined): string | undefined {
 	return undefined;
 }
 
-/** Narrow a thrown/provider value to JSON we can log and match on. */
+// value is unknown because `request()` / `ApiError.body` is untyped JSON that
+// varies by Uploadcare endpoint and error type, making a strict type
+// infeasible without per-endpoint handling.
 function asProviderJson(value: unknown): ProviderJson | undefined {
 	if (value === undefined) return undefined;
 	if (
@@ -87,7 +89,8 @@ function asProviderJson(value: unknown): ProviderJson | undefined {
 	return String(value);
 }
 
-/** `request()` may throw ApiError, Error, or a non-Error value. */
+// error is unknown because fetch/request can throw ApiError, Error, or a
+// non-Error value, making a strict type infeasible at this catch boundary.
 function wrapRequestError(error: unknown): never {
 	if (error instanceof ApiError) {
 		throw new UploadcareAPIError(
@@ -143,6 +146,8 @@ export async function makeUploadcareRequest<T>(
 	try {
 		return await request<T>(config, requestOptions);
 	} catch (error: unknown) {
+		// error is unknown because request() rejects with mixed throw types,
+		// making a strict type infeasible here.
 		wrapRequestError(error);
 	}
 }
@@ -175,6 +180,8 @@ export async function makeUploadcareUploadRequest<T>(
 	try {
 		return await request<T>(config, requestOptions);
 	} catch (error: unknown) {
+		// error is unknown because request() rejects with mixed throw types,
+		// making a strict type infeasible here.
 		wrapRequestError(error);
 	}
 }
