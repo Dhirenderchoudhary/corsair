@@ -395,6 +395,40 @@ describe('Webhook Signature Verification', () => {
 		).toEqual({ linkType: 'tenant_external_id', externalId: '13' });
 	});
 
+	it('accepts hub-verified deliveries without recomputing HMAC', () => {
+		expect(
+			verifyUploadcareWebhookSignature(
+				{
+					headers: {},
+					payload: {
+						event: 'file.uploaded',
+						data: { uuid: '123' },
+					},
+					hubVerified: true,
+				} as never,
+				'',
+			).valid,
+		).toBe(true);
+	});
+
+	it('rejects missing original raw body instead of hashing JSON.stringify', () => {
+		expect(
+			verifyUploadcareWebhookSignature(
+				{
+					headers: { 'x-uc-signature': 'v1=abcd' },
+					payload: {
+						event: 'file.uploaded',
+						data: { uuid: '123' },
+					},
+				} as never,
+				'secret',
+			),
+		).toEqual({
+			valid: false,
+			error: 'Original raw body required for signature verification',
+		});
+	});
+
 	it('rejects invalid signature and missing secret', () => {
 		expect(
 			verifyUploadcareWebhookSignature(
