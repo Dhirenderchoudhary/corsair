@@ -1,19 +1,16 @@
 import type {
 	AuthTypes,
 	BindEndpoints,
-	BindWebhooks,
 	CorsairEndpoint,
 	CorsairErrorHandler,
 	CorsairPlugin,
 	CorsairPluginContext,
-	CorsairWebhook,
 	KeyBuilderContext,
 	PickAuth,
 	PluginAuthConfig,
 	PluginPermissionsConfig,
 	RequiredPluginEndpointMeta,
 	RequiredPluginEndpointSchemas,
-	RequiredPluginWebhookSchemas,
 } from 'corsair/core';
 import {
 	Addons,
@@ -34,20 +31,11 @@ import {
 } from './endpoints/types';
 import { errorHandlers } from './error-handlers';
 import { UploadcareSchema } from './schema';
-import { UploadcareWebhooksList } from './webhooks';
-import { matchUploadcareTenantWebhook } from './webhooks/tenant-matcher';
-import type {
-	FileUploadedEvent,
-	UploadcareWebhookOutputs,
-} from './webhooks/types';
-import { FileUploadedEventSchema } from './webhooks/types';
 
 export type UploadcarePluginOptions = {
 	authType?: PickAuth<'api_key'>;
 	key?: string;
-	webhookSecret?: string;
 	hooks?: InternalUploadcarePlugin['hooks'];
-	webhookHooks?: InternalUploadcarePlugin['webhookHooks'];
 	errorHandlers?: CorsairErrorHandler;
 	permissions?: PluginPermissionsConfig<typeof uploadcareEndpointsNested>;
 };
@@ -74,17 +62,6 @@ type UploadcareEndpoint<K extends keyof UploadcareEndpointOutputs> =
 export type UploadcareEndpoints = {
 	[K in keyof UploadcareEndpointOutputs]: UploadcareEndpoint<K>;
 };
-
-type UploadcareWebhook<
-	K extends keyof UploadcareWebhookOutputs,
-	TEvent,
-> = CorsairWebhook<UploadcareContext, TEvent, UploadcareWebhookOutputs[K]>;
-
-export type UploadcareWebhooks = {
-	fileUploaded: UploadcareWebhook<'fileUploaded', FileUploadedEvent>;
-};
-
-export type UploadcareBoundWebhooks = BindWebhooks<UploadcareWebhooks>;
 
 const uploadcareEndpointsNested = {
 	files: {
@@ -136,11 +113,7 @@ const uploadcareEndpointsNested = {
 	},
 } as const;
 
-const uploadcareWebhooksNested = {
-	fileUploaded: {
-		fileUploaded: UploadcareWebhooksList.fileUploaded,
-	},
-} as const;
+const uploadcareWebhooksNested = {} as const;
 
 export const uploadcareEndpointSchemas = {
 	'files.list': {
@@ -279,16 +252,6 @@ export const uploadcareEndpointSchemas = {
 	typeof uploadcareEndpointsNested
 >;
 
-const uploadcareWebhookSchemas = {
-	'fileUploaded.fileUploaded': {
-		description: 'File uploaded webhook event',
-		payload: FileUploadedEventSchema,
-		response: FileUploadedEventSchema,
-	},
-} as const satisfies RequiredPluginWebhookSchemas<
-	typeof uploadcareWebhooksNested
->;
-
 const defaultAuthType: AuthTypes = 'api_key' as const;
 
 const uploadcareEndpointMeta = {
@@ -414,9 +377,7 @@ const uploadcareEndpointMeta = {
 >;
 
 export const uploadcareAuthConfig = {
-	api_key: {
-		account: ['tenant_external_id'] as const,
-	},
+	api_key: {},
 } as const satisfies PluginAuthConfig;
 
 export type BaseUploadcarePlugin<T extends UploadcarePluginOptions> =
@@ -449,54 +410,17 @@ export function uploadcare<const T extends UploadcarePluginOptions>(
 		schema: UploadcareSchema,
 		options: options,
 		hooks: options.hooks,
-		webhookHooks: options.webhookHooks,
+		webhookHooks: undefined,
 		endpoints: uploadcareEndpointsNested,
 		webhooks: uploadcareWebhooksNested,
 		endpointMeta: uploadcareEndpointMeta,
 		endpointSchemas: uploadcareEndpointSchemas,
-		webhookSchemas: uploadcareWebhookSchemas,
-		pluginWebhookMatcher: (request) => {
-			const headers = request.headers;
-			if ('x-uc-signature' in headers || 'x-uploadcare-signature' in headers) {
-				return true;
-			}
-			const body =
-				typeof request.body === 'string'
-					? (() => {
-							try {
-								return JSON.parse(request.body);
-							} catch {
-								return null;
-							}
-						})()
-					: request.body;
-			if (body === null || typeof body !== 'object') return false;
-			const record = body as Record<string, unknown>;
-			const hook =
-				record.hook && typeof record.hook === 'object'
-					? (record.hook as Record<string, unknown>)
-					: null;
-			return (
-				'data' in record &&
-				(record.event === 'file.uploaded' || hook?.event === 'file.uploaded')
-			);
-		},
-		pluginTenantWebhookMatcher: matchUploadcareTenantWebhook,
+		pluginWebhookMatcher: undefined,
 		errorHandlers: {
 			...errorHandlers,
 			...options.errorHandlers,
 		},
 		keyBuilder: async (ctx: UploadcareKeyBuilderContext, source) => {
-			if (source === 'webhook' && options.webhookSecret) {
-				return options.webhookSecret;
-			}
-
-			if (source === 'webhook') {
-				if (!ctx.keys) return '';
-				const res = await ctx.keys.get_webhook_signature();
-				return res ?? '';
-			}
-
 			if (source === 'endpoint' && options.key) {
 				return options.key;
 			}
@@ -516,7 +440,3 @@ export type {
 	UploadcareEndpointInputs,
 	UploadcareEndpointOutputs,
 } from './endpoints/types';
-export type {
-	FileUploadedEvent,
-	UploadcareWebhookOutputs,
-} from './webhooks/types';

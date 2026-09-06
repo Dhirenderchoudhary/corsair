@@ -10,7 +10,7 @@ import type {
 
 function withoutSigningSecret(
 	input: WebhookCreateInput | WebhookUpdateInput,
-): Record<string, unknown> {
+): Omit<WebhookCreateInput | WebhookUpdateInput, 'signing_secret'> {
 	const { signing_secret: _secret, ...safe } = input;
 	return safe;
 }

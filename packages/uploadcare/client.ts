@@ -1,13 +1,21 @@
 import type { ApiRequestOptions, OpenAPIConfig } from 'corsair/http';
 import { ApiError, request } from 'corsair/http';
 
+/** Provider error/request JSON: string, number, boolean, null, array, or object. */
+type ProviderJson =
+	| string
+	| number
+	| boolean
+	| null
+	| ProviderJson[]
+	| { [key: string]: ProviderJson | undefined };
+
 export class UploadcareAPIError extends Error {
 	constructor(
 		message: string,
 		public readonly code?: string,
 		public readonly status?: number,
-		// Provider error JSON is not a single documented object.
-		public readonly body?: unknown,
+		public readonly body?: ProviderJson,
 		public readonly retryAfter?: number,
 	) {
 		super(message);
@@ -31,30 +39,62 @@ function simpleAuthHeader(apiKey: string): string {
 		: `Uploadcare.Simple ${apiKey}`;
 }
 
-function errorMessage(body: unknown, fallback: string): string {
-	if (body && typeof body === 'object') {
-		if ('detail' in body && body.detail != null) return String(body.detail);
-		if ('message' in body && body.message != null) return String(body.message);
-		if ('error' in body && body.error != null) return String(body.error);
+function errorMessage(
+	body: ProviderJson | undefined,
+	fallback: string,
+): string {
+	if (body && typeof body === 'object' && !Array.isArray(body)) {
+		if (body.detail != null) return String(body.detail);
+		if (body.message != null) return String(body.message);
+		if (body.error != null) return String(body.error);
 	}
 	return fallback;
 }
 
-function errorCode(body: unknown): string | undefined {
-	if (body && typeof body === 'object' && 'code' in body && body.code != null) {
+function errorCode(body: ProviderJson | undefined): string | undefined {
+	if (
+		body &&
+		typeof body === 'object' &&
+		!Array.isArray(body) &&
+		body.code != null
+	) {
 		return String(body.code);
 	}
 	return undefined;
 }
 
-// fetch/request can throw ApiError, Error, or a non-Error value.
+/** Narrow a thrown/provider value to JSON we can log and match on. */
+function asProviderJson(value: unknown): ProviderJson | undefined {
+	if (value === undefined) return undefined;
+	if (
+		value === null ||
+		typeof value === 'string' ||
+		typeof value === 'number' ||
+		typeof value === 'boolean'
+	) {
+		return value;
+	}
+	if (Array.isArray(value)) {
+		return value.map((item) => asProviderJson(item) ?? null);
+	}
+	if (typeof value === 'object') {
+		const out: { [key: string]: ProviderJson | undefined } = {};
+		for (const [key, item] of Object.entries(value)) {
+			out[key] = asProviderJson(item);
+		}
+		return out;
+	}
+	return String(value);
+}
+
+/** `request()` may throw ApiError, Error, or a non-Error value. */
 function wrapRequestError(error: unknown): never {
 	if (error instanceof ApiError) {
 		throw new UploadcareAPIError(
-			errorMessage(error.body, error.message),
-			errorCode(error.body),
+			errorMessage(asProviderJson(error.body), error.message),
+			errorCode(asProviderJson(error.body)),
 			error.status,
-			error.body,
+			asProviderJson(error.body),
 			error.retryAfter,
 		);
 	}
@@ -70,7 +110,7 @@ export async function makeUploadcareRequest<T>(
 	options: {
 		method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
 		// REST bodies are arrays (batch UUIDs) or objects depending on the op.
-		body?: unknown;
+		body?: ProviderJson | ProviderJson[];
 		query?: Record<string, string | number | boolean | undefined>;
 		mediaType?: string;
 		formData?: Record<string, string | number | boolean | undefined>;
