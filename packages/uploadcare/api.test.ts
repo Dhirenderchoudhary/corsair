@@ -1,3 +1,4 @@
+import { logEventFromContext } from 'corsair/core';
 import {
 	makeUploadcareRequest,
 	publicKeyFromAuth,
@@ -17,6 +18,7 @@ import {
 	UploadcareEndpointOutputSchemas,
 } from './endpoints/types';
 import { errorHandlers } from './error-handlers';
+import { matchUploadcareTenantWebhook } from './webhooks/tenant-matcher';
 import { verifyUploadcareWebhookSignature } from './webhooks/types';
 
 jest.mock('corsair/core', () => {
@@ -228,7 +230,14 @@ describe('Uploadcare endpoints', () => {
 		await Webhooks.create(ctx, {
 			target_url: 'https://example.com/hook',
 			event: 'file.uploaded',
+			signing_secret: 'do-not-log',
 		});
+		expect(logEventFromContext).toHaveBeenCalledWith(
+			ctx,
+			'uploadcare.webhooks.create',
+			expect.not.objectContaining({ signing_secret: expect.anything() }),
+			'completed',
+		);
 		mockedRest.mockResolvedValueOnce({ id: 1 });
 		await Webhooks.update(ctx, { webhook_id: 1, is_active: false });
 		mockedRest.mockResolvedValueOnce(undefined);
@@ -354,6 +363,18 @@ describe('Webhook Signature Verification', () => {
 				secret,
 			).valid,
 		).toBe(true);
+	});
+
+	it('matches official hook.project for tenant routing', () => {
+		expect(
+			matchUploadcareTenantWebhook({
+				headers: {},
+				body: {
+					hook: { event: 'file.uploaded', project: 13 },
+					data: { uuid: FILE.uuid },
+				},
+			} as never),
+		).toEqual({ linkType: 'project_id', externalId: '13' });
 	});
 
 	it('rejects invalid signature and missing secret', () => {

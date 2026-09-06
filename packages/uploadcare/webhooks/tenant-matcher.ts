@@ -1,9 +1,23 @@
 import type { RawWebhookRequest, WebhookTenantMatch } from 'corsair/core';
+import { asRecord, firstString, readBodyRecord } from 'corsair/core';
 
-// Uploadcare webhook payloads identify file and event metadata rather than account/tenant IDs.
-// Routing uses the per-endpoint signing secret instead.
+/** Official v0.7 payloads put the project id on `hook.project`. */
 export function matchUploadcareTenantWebhook(
-	_request: RawWebhookRequest,
+	request: RawWebhookRequest,
 ): WebhookTenantMatch | null {
-	return null;
+	const body = readBodyRecord(request);
+	if (!body) return null;
+
+	const hook = asRecord(body.hook);
+	const data = asRecord(body.data);
+	const externalId = firstString([
+		body.tenant_external_id,
+		hook?.project,
+		body.project,
+		data?.project,
+	]);
+
+	if (!externalId) return null;
+
+	return { linkType: 'project_id', externalId };
 }

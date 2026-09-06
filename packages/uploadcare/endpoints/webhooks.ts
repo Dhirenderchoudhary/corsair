@@ -1,7 +1,19 @@
 import { logEventFromContext } from 'corsair/core';
 import type { UploadcareEndpoints } from '..';
 import { makeUploadcareRequest } from '../client';
-import type { UploadcareWebhook, WebhooksListResponse } from './types';
+import type {
+	UploadcareWebhook,
+	WebhookCreateInput,
+	WebhooksListResponse,
+	WebhookUpdateInput,
+} from './types';
+
+function withoutSigningSecret(
+	input: WebhookCreateInput | WebhookUpdateInput,
+): Record<string, unknown> {
+	const { signing_secret: _secret, ...safe } = input;
+	return safe;
+}
 
 export const list: UploadcareEndpoints['webhooksList'] = async (ctx, input) => {
 	const response = await makeUploadcareRequest<WebhooksListResponse>(
@@ -30,7 +42,7 @@ export const create: UploadcareEndpoints['webhookCreate'] = async (
 	await logEventFromContext(
 		ctx,
 		'uploadcare.webhooks.create',
-		input,
+		withoutSigningSecret(input),
 		'completed',
 	);
 	return response;
@@ -49,7 +61,7 @@ export const update: UploadcareEndpoints['webhookUpdate'] = async (
 	await logEventFromContext(
 		ctx,
 		'uploadcare.webhooks.update',
-		input,
+		withoutSigningSecret(input),
 		'completed',
 	);
 	return response;

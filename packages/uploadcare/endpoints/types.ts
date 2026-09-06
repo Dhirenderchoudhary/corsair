@@ -15,8 +15,10 @@ export const UploadcareFileSchema = z
 		size: z.number().optional(),
 		url: z.string().optional(),
 		variations: z.record(z.string(), z.string()).nullable().optional(),
+		// Official image vs video content_info shapes differ by mime type.
 		content_info: z.record(z.string(), z.unknown()).optional(),
 		metadata: z.record(z.string(), z.string()).optional(),
+		// Official appdata keys depend on which add-ons ran.
 		appdata: z.record(z.string(), z.unknown()).optional(),
 		tags: z.array(z.string()).optional(),
 	})
@@ -30,6 +32,7 @@ export const UploadcareGroupSchema = z
 		files_count: z.number().optional(),
 		cdn_url: z.string().optional(),
 		url: z.string().optional(),
+		// Official group.files is file objects or null for removed members.
 		files: z.array(z.unknown()).nullable().optional(),
 	})
 	.loose();

@@ -6,24 +6,45 @@ import type {
 import * as crypto from 'crypto';
 import { z } from 'zod';
 
-export const UploadcareWebhookPayloadSchema = z.object({
-	event: z.string(),
-	data: z.record(z.string(), z.unknown()),
-});
+export const UploadcareWebhookPayloadSchema = z
+	.object({
+		event: z.string().optional(),
+		hook: z.record(z.string(), z.unknown()).optional(),
+		// Official extra keys (appdata, content_info) vary by file type.
+		data: z.record(z.string(), z.unknown()),
+	})
+	.loose();
 
 export type UploadcareWebhookPayload = z.infer<
 	typeof UploadcareWebhookPayloadSchema
 >;
 
-export const FileUploadedEventSchema = UploadcareWebhookPayloadSchema.extend({
-	event: z.literal('file.uploaded'),
-	data: z
-		.object({
-			uuid: z.string(),
-			original_filename: z.string().optional().nullable(),
-		})
-		.loose(),
-});
+export const FileUploadedEventSchema = z
+	.object({
+		event: z.literal('file.uploaded').optional(),
+		hook: z
+			.object({
+				event: z.string().optional(),
+				project: z.union([z.number(), z.string()]).optional(),
+				id: z.number().optional(),
+			})
+			.loose()
+			.optional(),
+		data: z
+			.object({
+				uuid: z.string(),
+				original_filename: z.string().optional().nullable(),
+			})
+			.loose(),
+		file: z.string().optional(),
+	})
+	.loose()
+	.refine(
+		(payload) =>
+			payload.event === 'file.uploaded' ||
+			payload.hook?.event === 'file.uploaded',
+		{ message: 'expected file.uploaded event' },
+	);
 
 export type FileUploadedEvent = z.infer<typeof FileUploadedEventSchema>;
 
@@ -54,7 +75,13 @@ export function createUploadcareMatch(
 ): CorsairWebhookMatcher {
 	return (request: RawWebhookRequest) => {
 		const parsedBody = parseBody(request.body);
-		return parsedBody !== null && parsedBody.event === eventType;
+		if (!parsedBody) return false;
+		const hook = parsedBody.hook;
+		const hookEvent =
+			hook && typeof hook === 'object' && 'event' in hook
+				? String(hook.event)
+				: undefined;
+		return parsedBody.event === eventType || hookEvent === eventType;
 	};
 }
 

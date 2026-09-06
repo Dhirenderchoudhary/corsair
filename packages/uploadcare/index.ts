@@ -470,11 +470,15 @@ export function uploadcare<const T extends UploadcarePluginOptions>(
 							}
 						})()
 					: request.body;
+			if (body === null || typeof body !== 'object') return false;
+			const record = body as Record<string, unknown>;
+			const hook =
+				record.hook && typeof record.hook === 'object'
+					? (record.hook as Record<string, unknown>)
+					: null;
 			return (
-				body !== null &&
-				typeof body === 'object' &&
-				'event' in body &&
-				'data' in body
+				'data' in record &&
+				(record.event === 'file.uploaded' || hook?.event === 'file.uploaded')
 			);
 		},
 		pluginTenantWebhookMatcher: matchUploadcareTenantWebhook,

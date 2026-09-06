@@ -19,7 +19,8 @@ export const fileUploaded: UploadcareWebhooks['fileUploaded'] = {
 		}
 
 		const event = request.payload;
-		if (event.event !== 'file.uploaded') {
+		const eventName = event.event ?? event.hook?.event;
+		if (eventName !== 'file.uploaded') {
 			return { success: true, data: undefined };
 		}
 
