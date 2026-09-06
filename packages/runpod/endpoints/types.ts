@@ -271,7 +271,7 @@ export const SaveEndpointInputSchema = z.object({
 	locations: z.string().optional(),
 	flashBootType: z.enum(['FLASHBOOT']).optional(),
 	scalerType: z.enum(['QUEUE_DELAY', 'REQUEST_COUNT']).optional(),
-	scalerValue: z.number().optional(),
+	scalerValue: z.number().int().optional(),
 	workersMin: z.number().int().optional(),
 	workersMax: z.number().int().optional(),
 	networkVolumeId: z.string().optional(),
