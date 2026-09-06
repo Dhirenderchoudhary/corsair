@@ -17,7 +17,7 @@ const upload = hasPublic ? it : it.skip;
 
 describe('Uploadcare live API', () => {
 	rest('project.get matches official schema', async () => {
-		const result = await makeUploadcareRequest<unknown>('/project/', API_KEY!, {
+		const result = await makeUploadcareRequest('/project/', API_KEY!, {
 			method: 'GET',
 		});
 		const parsed = UploadcareEndpointOutputSchemas.projectGet.parse(result);
@@ -25,7 +25,7 @@ describe('Uploadcare live API', () => {
 	});
 
 	rest('files.list matches official schema', async () => {
-		const result = await makeUploadcareRequest<unknown>('/files/', API_KEY!, {
+		const result = await makeUploadcareRequest('/files/', API_KEY!, {
 			method: 'GET',
 			query: { limit: 5 },
 		});
@@ -33,7 +33,7 @@ describe('Uploadcare live API', () => {
 	});
 
 	upload('upload.from_url accepts the public key', async () => {
-		const result = await makeUploadcareUploadRequest<unknown>('/from_url/', {
+		const result = await makeUploadcareUploadRequest('/from_url/', {
 			method: 'POST',
 			formData: {
 				pub_key: publicKeyFromAuth(API_KEY!),

@@ -130,11 +130,11 @@ export const startMultipart: UploadcareEndpoints['startMultipartUpload'] =
 			{
 				method: 'POST',
 				formData: {
-					pub_key: publicKeyFromAuth(ctx.key),
+					UPLOADCARE_PUB_KEY: publicKeyFromAuth(ctx.key),
 					filename: input.filename,
 					size: input.size,
 					content_type: input.content_type,
-					store: input.store,
+					UPLOADCARE_STORE: input.store,
 				},
 			},
 		);
